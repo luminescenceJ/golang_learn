@@ -3278,6 +3278,298 @@ $ docker image rm [imageName]  # 删除 image 文件
 >$ docker image prune # 这样会删除未使用的镜像和未引用的中间层，释放空间。
 >```
 
+## Ubuntu
+
+### conda
+
+创建虚拟环境
+conda create -n name python==3.9
+
+激活环境
+conda activate name
+
+退出环境
+conda deactivate
+
+查看虚拟环境
+conda info --envs
+
+删除虚拟环境
+conda remove -n name --all
+
+
+删除所有的安装包及cache(索引缓存、锁定文件、未使用过的包和tar包)
+conda clean -y --all
+
+删除pip的缓存
+rm -rf ~/.cache/pip
+
+### linux 常见指令
+
+`pwd` 是当前路径
+`sudo apt remove example` 卸载
+`sudo dpkg -i example` 安装deb后缀 
+`dpkg -l | grep example` 查看已经安装的
+`chmod 777 example` 修改文件权限
+
+
+### 系统backup
+
+`tar -cvpzf backup.tar.gz --exclude=/proc --exclude=/lost+found --exclude=/backup.tar.gz --exclude=/mnt --exclude=/sys --exclude=/media /`  系统的压缩文件快照制作
+
+
+
+`-c`：新建备份文档
+`-v`：显示详细信息
+`-p`：保存权限
+`-z`：gzip压缩
+`-f`：指定压缩包名称路径(最后一个参数)
+`-exclude`：不备份的目录
+
+`tar -xvpzf backup.tar.gz -C /` 重写解压系统 
+
+> 最好先rm -rf /tmp/root*  删除根目录文件
+
+
+
+
+
+### 浏览和创建文件
+
+**cat：一次性显示文件所有内容，更适合查看小的文件。**
+
+cat file.name
+
+【常用参数】
+
+    -n显示行号。
+
+**less：分页显示文件内容，更适合查看大的文件**。
+
+less file.name
+
+【快捷操作】
+
+    空格键：前进一页（一个屏幕）；
+    
+    b 键：后退一页；
+    
+    回车键：前进一行；
+    
+    y 键：后退一行；
+    
+    上下键：回退或前进一行；
+    
+    d 键：前进半页；
+    
+    u 键：后退半页；
+    
+    q 键：停止读取文件，中止less命令；
+    
+    = 键：显示当前页面的内容是文件中的第几行到第几行以及一些其它关于本页内容的详细信息；
+    
+    h 键：显示帮助文档；
+    
+    / 键：进入搜索模式后，按 n 键跳到一个符合项目，按 N 键跳到上一个符合项目，同时也可以输入正则表达式匹配。
+
+**mkdir 创建目录**
+
+【**常用参数**】
+
+- `-p`递归的创建目录结构`mkdir -p one/two/three`
+
+tourch 创建文件
+
+**cp 拷贝文件**
+
+``` 
+cp file file_copy --> file 是目标文件，file_copy 是拷贝出来的文件  
+cp file one --> 把 file 文件拷贝到 one 目录下，并且文件名依然为 file  
+cp file one/file_copy --> 把 file 文件拷贝到 one 目录下，文件名为file_copy  
+cp *.txt folder --> 把当前目录下所有 txt 文件拷贝到 folder 目录下  
+```
+
+**ln  创建链接**
+
+```
+Linux 文件的存储方式分为 3 个部分，文件名、文件内容以及权限，其中文件名的列表是存储在硬盘的其它地方和文件内容是分开存放的，每个文件名通过 inode 标识绑定到文件内容。
+Linux 下有两种链接类型：硬链接和软链接。
+```
+
+硬链接
+
+    使链接的两个文件共享同样文件内容，就是同样的 inode ，一旦文件 1 和文件 2 之间有了硬链接，那么修改任何一个文件，修改的都是同一块内容，它的缺点是，只能创建指向文件的硬链接，不能创建指向目录的（其实也可以，但比较复杂）而软链接都可以，因此软链接使用更加广泛。
+    ln file1 file2  --> 创建 file2 为 file1 的硬链接  
+
+软链接就类似 windows 下快捷方式。
+
+```
+ln -s file1 file2  
+```
+
+**chmod：修改访问权限。**
+
+```
+chmod 740 file.txt  
+```
+
+【**常用参数**】
+
+- `-R`可以递归地修改文件访问权限，例如`chmod -R 777 /home/lion`
+
+其中d rwx r-x r-x表示文件或目录的权限。
+
+- 它是一个文件夹；所有者具有：读、写、执行权限；群组用户具有：读、执行的权限，没有写的权限；其它用户具有：读、执行的权限，没有写的权限。
+
+  d ：表示目录，就是说这是一个目录，普通文件是 - ，链接是 l 。
+  r ：read表示文件可读。
+  w ：write表示文件可写，一般有写的权限，就有删除的权限。
+  x ：execute表示文件可执行。
+
+  - ：表示没有相应权限。
+
+| 权限 | 数字 |
+| ---- | ---- |
+| r    | 4    |
+| w    | 2    |
+| x    | 1    |
+
+用字母来分配权限
+
+    u：user 的缩写，用户的意思，表示所有者。
+    
+    g ：group 的缩写，群组的意思，表示群组用户。
+    
+    o ：other 的缩写，其它的意思，表示其它用户。
+    
+    a ：all 的缩写，所有的意思，表示所有用户。
+    
+    + ：加号，表示添加权限。
+    
+    - ：减号，表示去除权限。
+    
+    = ：等于号，表示分配权限。
+
+> chmod u+rx file --> 文件file的所有者增加读和运行的权限  
+> chmod g+r file --> 文件file的群组用户增加读的权限  
+> chmod o-r file --> 文件file的其它用户移除读的权限  
+> chmod g+r o-r file --> 文件file的群组用户增加读的权限，其它用户移除读的权限  
+> chmod go-r file --> 文件file的群组和其他用户移除读的权限  
+> chmod +x file --> 文件file的所有用户增加运行的权限  
+> chmod u=rwx,g=r,o=- file --> 文件file的所有者分配读写和执行的权限，群组其它用户分配读的权限，其他用户没有任何权限  
+
+
+
+**tar 创建一个tar归档。**
+
+    tar -cvf sort.tar sort/ # 将sort文件夹归档为sort.tar  
+    tar -cvf archive.tar file1 file2 file3 # 将 file1 file2 file3 归档为archive.tar  
+
+常用参数
+
+    -cvf 表示 create（创建）+ verbose（细节）+ file（文件），创建归档文件并显示操作细节；
+     
+    -tf  显示归档里的内容，并不解开归档；
+    
+    -rvf 追加文件到归档，tar -rvf archive.tar file.txt；
+    
+    -xvf 解开归档，tar -xvf archive.tar。
+
+**gzip / gunzip “压缩 / 解压” 归档**，默认用gzip命令，压缩后的文件后缀名为.tar.gz。
+
+可以用 tar 命令同时完成归档和压缩的操作，就是给 tar 命令多加一个选项参数，使之完成归档操作后，还是调用gzip 或 bzip2命令来完成压缩操作。
+
+**zcat、zless、zmore**
+
+之前讲过使用cat less more可以查看文件内容，但是压缩文件的内容是不能使用这些命令进行查看的，而要使用zcat、zless、zmore进行查看。
+
+**zip/unzip**
+
+“压缩 / 解压” zip 文件（ zip 压缩文件一般来自 windows 操作系统）。
+
+>unzip archive.zip # 解压 .zip 文件  
+>unzip -l archive.zip # 不解开 .zip 文件，只看其中内容  
+>
+>zip -r sort.zip sort/ # 将sort文件夹压缩为 sort.zip，其中-r表示递归  
+
+### redis
+
+**Starting and stopping Redis in the background**
+
+You can start the Redis server as a background process using the `systemctl` command. This only applies to Ubuntu/Debian when installed using `apt`, and Red Hat/Rocky when installed using `yum`.
+
+```bash
+sudo systemctl start redis
+```
+
+To stop the server, use:
+
+```bash
+sudo systemctl stop redis
+```
+
+**Connect to Redis**
+
+Once Redis is running, you can  test it by running `redis-cli`:
+
+```bash
+redis-cli -h 127.0.0.1 -p 6379 -a 123456
+# -a 表示密码 可以后续使用auth 123456登陆
+```
+
+Test the connection with the `ping` command:
+
+```bash
+127.0.0.1:6379> ping
+PONG
+```
+
+### etcd 
+
+输入命令etcd，即可启动一个单节点的etcd服务,ctrl+c即可停止服务
+
+```cmd
+####启动服务
+etcd
+####重新加载systemd服务
+systemctl daemon-reload
+####设置开机自启动
+systemctl enable etcd 
+####查看etcd运行状态
+systemctl status etcd
+####启动etcd
+systemctl start etcd
+```
+
+> 1.name表示节点名称，默认为default。
+> 2.data-dir 保存日志和快照的目录，默认为当前工作目录default.etcd/目录下。
+> 3.在http://localhost:2380和集群中其他节点通信。
+> 4.在http://localhost:2379提供客户端交互。
+> 5.heartbeat为100ms，该参数的作用是leader多久发送一次心跳到followers，默认值是100ms。
+> 6.election为1000ms，该参数的作用是重新投票的超时时间，如果follow在该时间间隔没有收到心跳包，会触发重新投票，默认为1000ms。
+> 7.snapshot count为10000，该参数的作用是指定有多少事务被提交时，触发截取快照保存到磁盘。
+> 8.集群和每个节点都会生成一个uuid。
+> 9.启动的时候会运行raft，选举出leader
+
+### apt-install
+
+通过 sudo apt install 命令安装的软件包的位置可能会因软件包的类型和配置而有所不同。一般情况下，使用 apt 命令安装的软件包会被存储在以下位置：
+
+    可执行文件：在 /usr/bin 目录下，这是系统范围内可执行文件的主要存放位置。
+    配置文件：在 /etc 目录下，大多数软件的配置文件都会存储在这个目录中。
+    库文件：在 /usr/lib 或 /usr/lib64 目录下，这里存放了共享库文件（动态链接库）。
+    文档和帮助文件：在 /usr/share/doc 或 /usr/share/man 目录下，这里存放了软件包的文档和帮助文件。
+
+### Common Path 
+
+**通过tar安装的软件**
+
+>本体: /usr/local/mytool
+>
+>可执行文件:/usr/bin
+
+
+
 ## Ref
 
 ### [Go语言后端开发学习路线](https://www.zhihu.com/question/466080367)
