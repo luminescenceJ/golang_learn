@@ -2585,6 +2585,38 @@ func (u *unionSet) isSameSet(p,q int)bool{
 
 ## MySQL
 
+### 结构
+
+![image-20231212165353714](./assets/image-20231212165353714.png)
+
+- 连接管理
+
+> 每当有一个客户端进程连接到服务器进程时，服务器进程都会创建一个线程来专门处理与这个 客户端的交互，当该客户端退出时会与服务器断开连接，服务器并不会立即把与该客户端交互的线程销毁掉，而 是把它缓存起来，在另一个新的客户端再进行连接时，把这个缓存的线程分配给该新客户端。这样就起到了不频 繁创建和销毁线程的效果，从而节省开销。
+
+- 解析与优化
+
+>1. 查询缓存
+>
+> MySQL 服务器会把刚刚处理过的查询请求和结果缓存起来，如果下一次有一模一样的请求过来，直接从缓存中查找结果。
+>
+> 如果两个查询请求在任何字符上的不同（例如：空格、注释、大小写），都 会导致缓存不会命中。另外，如果查询请求中包含某些系统函数、用户自定义变量和函数、一些系统表，如 mysql 、information_schema、 performance_schema 数据库中的表，那这个请求就不会被缓存。
+>
+> MySQL的缓存系统会监测涉及到的每张表，只要该表的结构或者数 据被修改，如对该表使用了 INSERT 、 UPDATE 、 DELETE 、 TRUNCATE TABLE 、 ALTER TABLE 、 DROP TABLE 或 DROP DATABASE 语句，那使用该表的所有高速缓存查询都将变为无效并从高速缓存中删除！
+>
+>2. 语法解析
+>
+> 因为客户端程序发送过来的请求只是一段文本而 已，所以 MySQL 服务器程序首先要对这段文本做分析，判断请求的语法是否正确，然后从文本中将要查询的表、 各种查询条件都提取出来放到 MySQL 服务器内部使用的一些数据结构上来。
+>
+>3. 查询优化
+>
+> 服务器程序获得到了需要的信息，比如要查询的列是哪些，表是哪个，搜索条件是什么等等，但 光有这些是不够的，因为MySQL 语句执行起来效率可能并不是很高， MySQL 的优化程序会对我们的语句 做一些优化，如外连接转换为内连接、表达式简化、子查询转为连接吧啦吧啦的一堆东西。优化的结果就是生成 一个执行计划，这个执行计划表明了应该使用哪些索引进行查询，表之间的连接顺序是啥样的。
+
+- 存储引擎
+
+>MySQL 服务器把数据的存储和提取 操作都封装到了一个叫 存储引擎 的模块里。
+>
+>我们知道 表 是由一行一行的记录组成的，但这只是一个逻辑上的概 念，物理上如何表示记录，怎么从表中读取数据，怎么把数据写入具体的物理存储器上，这都是 存储引擎 负责 的事情。为了实现不同的功能， MySQL 提供了各式各样的 存储引擎 ，不同 存储引擎 管理的表具体的存储结构 可能不同，采用的存取算法也可能不同。
+
 ### SQL
 
 ![image-20241023145007159](./assets/image-20241023145007159-1729739785662-16.png)
@@ -3084,7 +3116,37 @@ release savepoint 保存点名称;-- 删除保存点
 
 ![image-20241023201445590](./assets/image-20241023201445590-1729739785663-27.png)
 
+### 存储引擎
+
+![image-20241025121804959](./assets/image-20241025121804959.png)
+
+**存储引擎的选择**
+
+在选择存储引擎时，应该根据应用系统的特点选择合适的存储引擎。对于复杂的应用系统，还可以根据实际情况选择多种存储引擎进行组合。
+
+- **InnoDB**: 如果应用对事物的完整性有比较高的要求，在并发条件下要求数据的一致性，数据操作除了插入和查询之外，还包含很多的更新、删除操作，则 InnoDB 是比较合适的选择
+- MyISAM: 如果应用是以读操作和插入操作为主，只有很少的更新和删除操作，并且对事务的完整性、并发性要求不高，那这个存储引擎是非常合适的。**(Mongodb 上位替代)**
+- Memory: 将所有数据保存在内存中，访问速度快，通常用于临时表及缓存。Memory 的缺陷是对表的大小有限制，太大的表无法缓存在内存中，而且无法保障数据的安全性**(Redis)**
+
+电商中的足迹和评论适合使用 MyISAM 引擎，缓存适合使用 Memory 引擎。
+
 ### 索引
+
+![image-20241025122951707](./assets/image-20241025122951707.png)
+
+![image-20241025130801672](./assets/image-20241025130801672.png)
+
+```mysql
+show index from tb_user; # 展示索引
+create index idx_user_name on tb_user(name); # 为tb_user表中的name字段创建常规索引
+create unique index idx_user_phone on tb_user(phone); # 为tb_user表中的phone字段创建唯一索引
+create unique index idx_user_pro_age_sta on tb_user(profession,age,status); # 为tb_user表中的profession,age,status三个字段创建联合索引
+# 索引命名规范为 idx_tableName_colName
+
+drop index idx_user_name on tb_user; #删除索引
+```
+
+
 
 `主键索引(Primary Key)`  `唯一索引(Unique)` `常规索引(Index)` `全文索引(FullText)` 
 
@@ -3102,50 +3164,7 @@ release savepoint 保存点名称;-- 删除保存点
 >- NDB 支持事务，支持行级别锁定，支持 Hash 索引，不支持 B-tree、Full-text 等索引; 
 >- Archive 不支持事务，支持表级别锁定，不支持 B-tree、Hash、Full-text 等索引;
 
-### 设计原则
-
-**三大范式**
-
->- 第一范式的目标是确保每列的原子性,如果**每列都是不可再分的最小数据单元**,则满足第一范式
->
->- 第二范式要求**每个表只描述一件事情**。需要满足第一范式。
->- 如果一个关系满足第二范式,并且**除了主键以外的其他列都不传递依赖于主键列**,则满足第三范式.第三范式需要确保数据表中的每一列数据都和主键直接相关，而不能间接相关。
-
-
-
-  ![image-20231212165353714](./assets/image-20231212165353714.png)
-
-- 连接管理
-
-> 每当有一个客户端进程连接到服务器进程时，服务器进程都会创建一个线程来专门处理与这个 客户端的交互，当该客户端退出时会与服务器断开连接，服务器并不会立即把与该客户端交互的线程销毁掉，而 是把它缓存起来，在另一个新的客户端再进行连接时，把这个缓存的线程分配给该新客户端。这样就起到了不频 繁创建和销毁线程的效果，从而节省开销。
-
-- 解析与优化
-
->1. 查询缓存
->
->  MySQL 服务器会把刚刚处理过的查询请求和结果缓存起来，如果下一次有一模一样的请求过来，直接从缓存中查找结果。
->
->  如果两个查询请求在任何字符上的不同（例如：空格、注释、大小写），都 会导致缓存不会命中。另外，如果查询请求中包含某些系统函数、用户自定义变量和函数、一些系统表，如 mysql 、information_schema、 performance_schema 数据库中的表，那这个请求就不会被缓存。
->
->  MySQL的缓存系统会监测涉及到的每张表，只要该表的结构或者数 据被修改，如对该表使用了 INSERT 、 UPDATE 、 DELETE 、 TRUNCATE TABLE 、 ALTER TABLE 、 DROP TABLE 或 DROP DATABASE 语句，那使用该表的所有高速缓存查询都将变为无效并从高速缓存中删除！
->
->2. 语法解析
->
->  因为客户端程序发送过来的请求只是一段文本而 已，所以 MySQL 服务器程序首先要对这段文本做分析，判断请求的语法是否正确，然后从文本中将要查询的表、 各种查询条件都提取出来放到 MySQL 服务器内部使用的一些数据结构上来。
->
->3. 查询优化
->
->  服务器程序获得到了需要的信息，比如要查询的列是哪些，表是哪个，搜索条件是什么等等，但 光有这些是不够的，因为MySQL 语句执行起来效率可能并不是很高， MySQL 的优化程序会对我们的语句 做一些优化，如外连接转换为内连接、表达式简化、子查询转为连接吧啦吧啦的一堆东西。优化的结果就是生成 一个执行计划，这个执行计划表明了应该使用哪些索引进行查询，表之间的连接顺序是啥样的。
-
-- 存储引擎
-
->MySQL 服务器把数据的存储和提取 操作都封装到了一个叫 存储引擎 的模块里。
->
->我们知道 表 是由一行一行的记录组成的，但这只是一个逻辑上的概 念，物理上如何表示记录，怎么从表中读取数据，怎么把数据写入具体的物理存储器上，这都是 存储引擎 负责 的事情。为了实现不同的功能， MySQL 提供了各式各样的 存储引擎 ，不同 存储引擎 管理的表具体的存储结构 可能不同，采用的存取算法也可能不同。
-
-
-
-### **快速查询**：B+树
+#### **快速查询**：B+树
 
 在InnoDB数据页面中，可以由七个部分组成，包括
 
@@ -3189,7 +3208,390 @@ release savepoint 保存点名称;-- 删除保存点
 
 这种方式称为**二级索引**，它与原索引的不同指出在于，查到到数据位于某一页中之后也只能得到略缩的信息(索引的次主键和数据原主键)，所以我们必须再根据主键 值去聚簇索引中再查找一遍完整的用户记录(`回表`)。
 
-### B+树使用
+![image-20241025123603814](./assets/image-20241025123603814.png)
+
+#### 性能分析
+
+![image-20241025132244321](./assets/image-20241025132244321.png)
+
+>7个_ 用于模糊匹配占位.
+
+**Explain**
+
+EXPLAIN SELECT 字段列表 FROM 表名 HWERE 条件;
+
+EXPLAIN 各字段含义：
+
+- id：select 查询的序列号，表示查询中执行 select 子句或者操作表的顺序（id相同，执行顺序从上到下；id不同，值越大越先执行）
+- select_type：表示 SELECT 的类型，常见取值有 SIMPLE（简单表，即不适用表连接或者子查询）、PRIMARY（主查询，即外层的查询）、UNION（UNION中的第二个或者后面的查询语句）、SUBQUERY（SELECT/WHERE之后包含了子查询）等
+- type：表示连接类型，性能由好到差的连接类型为 NULL、system、const、eq_ref、ref、range、index、all
+- possible_key：可能应用在这张表上的索引，一个或多个
+- Key：实际使用的索引，如果为 NULL，则没有使用索引
+- Key_len：表示索引中使用的字节数，该值为索引字段最大可能长度，并非实际使用长度，在不损失精确性的前提下，长度越短越好
+- rows：MySQL认为必须要执行的行数，在InnoDB引擎的表中，是一个估计值，可能并不总是准确的
+- filtered：表示返回结果的行数占需读取行数的百分比，filtered的值越大越好
+
+#### 索引失效情况
+
+1. 在**索引列上进行运算操作**，索引将失效。如：`explain select * from tb_user where substring(phone, 10, 2) = '15';`
+2. **字符串类型字段使用时，不加引号**，索引将失效。如：`explain select * from tb_user where phone = 17799990015;`，此处phone的值没有加引号
+3. **模糊查询中，如果仅仅是尾部模糊匹配**，索引不会是失效；如果是头部模糊匹配，索引失效。如：`explain select * from tb_user where profession like '%工程';`，前后都有 % 也会失效。
+4. **用 or 分割开的条件，如果 or 其中一个条件的列没有索引**，那么涉及的索引都不会被用到。
+5. 如果 MySQL 评估使用索引比全表更慢，则不使用索引。
+
+#### 设计原则
+
+1. 针对于数据量较大，且查询比较频繁的表建立索引
+
+2. 针对于常作为查询条件（where）、排序（order by）、分组（group by）操作的字段建立索引
+
+3. 尽量选择区分度高的列作为索引，尽量建立唯一索引，区分度越高，使用索引的效率越高
+
+4. 如果是字符串类型的字段，字段长度较长，可以针对于字段的特点，建立前缀索引
+
+5. 尽量使用联合索引，减少单列索引，查询时，联合索引很多时候可以覆盖索引，节省存储空间，避免回表，提高查询效率
+
+6. 要控制索引的数量，索引并不是多多益善，索引越多，维护索引结构的代价就越大，会影响增删改的效率
+
+7. 如果索引列不能存储NULL值，请在创建表时使用NOT NULL约束它。当优化器知道每列是否包含NULL值时，它可以更好地确定哪个索引最有效地用于查询
+
+**三大范式**
+
+   >- 第一范式的目标是确保每列的原子性,如果**每列都是不可再分的最小数据单元**,则满足第一范式
+   >
+   >- 第二范式要求**每个表只描述一件事情**。需要满足第一范式。
+   >- 如果一个关系满足第二范式,并且**除了主键以外的其他列都不传递依赖于主键列**,则满足第三范式.第三范式需要确保数据表中的每一列数据都和主键直接相关，而不能间接相关。
+
+   ### SQL优化
+
+#### 插入优化
+
+- 大批量插入数据，使用文件进行插入
+
+![image-20241025164203157](./assets/image-20241025164203157.png)
+
+```mysql
+# 客户端连接服务端时，加上参数 --local-infile（这一行在bash/cmd界面输入）
+mysql --local-infile -u root -p
+# 设置全局参数local_infile为1，开启从本地加载文件导入数据的开关
+set global local_infile = 1;
+select @@local_infile;
+# 执行load指令将准备好的数据，加载到表结构中
+load data local infile '/root/sql1.log' into table 'tb_user' fields terminated by ',' lines terminated by '\n';
+```
+
+#### 主键优化
+
+数据组织方式：在InnoDB存储引擎中，表数据都是根据主键顺序组织存放的，这种存储方式的表称为索引组织表（Index organized table, IOT）
+
+页分裂：页可以为空，也可以填充一般，也可以填充100%，每个页包含了2-N行数据（如果一行数据过大，会行溢出），根据主键排列。
+页合并：当删除一行记录时，实际上记录并没有被物理删除，只是记录被标记（flaged）为删除并且它的空间变得允许被其他记录声明使用。当页中删除的记录到达 MERGE_THRESHOLD（默认为页的50%），InnoDB会开始寻找最靠近的页（前后）看看是否可以将这两个页合并以优化空间使用。
+
+MERGE_THRESHOLD：合并页的阈值，可以自己设置，在创建表或创建索引时指定
+
+> 文字说明不够清晰明了，具体可以看视频里的PPT演示过程：https://www.bilibili.com/video/BV1Kr4y1i7ru?p=90
+
+主键设计原则：
+
+- 满足业务需求的情况下，尽量降低主键的长度
+- 插入数据时，尽量选择顺序插入，选择使用 AUTO_INCREMENT 自增主键
+- 尽量不要使用 UUID 做主键或者是其他的自然主键，如身份证号
+- 业务操作时，避免对主键的修改
+
+#### order by优化
+
+1. Using filesort：通过表的索引或全表扫描，读取满足条件的数据行，然后在排序缓冲区 sort buffer 中完成排序操作，所有不是通过索引直接返回排序结果的排序都叫 FileSort 排序
+2. Using index：通过有序索引顺序扫描直接返回有序数据，这种情况即为 using index，不需要额外排序，操作效率高
+
+如果order by字段全部使用升序排序或者降序排序，则都会走索引，但是如果一个字段升序排序，另一个字段降序排序，则不会走索引，explain的extra信息显示的是`Using index, Using filesort`，如果要优化掉Using filesort，则需要另外再创建一个索引，如：`create index idx_user_age_phone_ad on tb_user(age asc, phone desc);`，此时使用`select id, age, phone from tb_user order by age asc, phone desc;`会全部走索引
+
+总结：
+
+- 根据排序字段建立合适的索引，多字段排序时，也遵循最左前缀法则
+- 尽量使用覆盖索引
+- 多字段排序，一个升序一个降序，此时需要注意联合索引在创建时的规则（ASC/DESC）
+- 如果不可避免出现filesort，大数据量排序时，可以适当增大排序缓冲区大小 sort_buffer_size（默认256k）
+
+#### group by优化
+
+- 在分组操作时，可以通过索引来提高效率
+- 分组操作时，索引的使用也是满足最左前缀法则的
+
+如索引为`idx_user_pro_age_stat`，则句式可以是`select ... where profession order by age`，这样也符合最左前缀法则
+
+#### limit优化
+
+常见的问题如`limit 2000000, 10`，此时需要 MySQL 排序前2000000条记录，但仅仅返回2000000 - 2000010的记录，其他记录丢弃，查询排序的代价非常大。
+优化方案：一般分页查询时，通过创建覆盖索引能够比较好地提高性能，可以通过覆盖索引加子查询形式进行优化
+
+例如：
+
+```mysql
+-- 此语句耗时很长
+select * from tb_sku limit 9000000, 10;
+-- 通过覆盖索引加快速度，直接通过主键索引进行排序及查询
+select id from tb_sku order by id limit 9000000, 10;
+-- 下面的语句是错误的，因为 MySQL 不支持 in 里面使用 limit
+-- select * from tb_sku where id in (select id from tb_sku order by id limit 9000000, 10);
+-- 通过连表查询即可实现第一句的效果，并且能达到第二句的速度
+select * from tb_sku as s, (select id from tb_sku order by id limit 9000000, 10) as a where s.id = a.id;
+```
+
+#### count优化
+
+MyISAM 引擎把一个表的总行数存在了磁盘上，因此执行 count(*) 的时候会直接返回这个数，效率很高（前提是不适用where）；
+InnoDB 在执行 count(*) 时，需要把数据一行一行地从引擎里面读出来，然后累计计数。
+优化方案：自己计数，如创建key-value表存储在内存或硬盘，或者是用redis
+
+count的几种用法：
+
+- 如果count函数的参数（count里面写的那个字段）不是NULL（字段值不为NULL），累计值就加一，最后返回累计值
+- 用法：count(*)、count(主键)、count(字段)、count(1)
+- count(主键)跟count(*)一样，因为主键不能为空；count(字段)只计算字段值不为NULL的行；count(1)引擎会为每行添加一个1，然后就count这个1，返回结果也跟count(*)一样；count(null)返回0
+
+各种用法的性能：
+
+- count(主键)：InnoDB引擎会遍历整张表，把每行的主键id值都取出来，返回给服务层，服务层拿到主键后，直接按行进行累加（主键不可能为空）
+- count(字段)：没有not null约束的话，InnoDB引擎会遍历整张表把每一行的字段值都取出来，返回给服务层，服务层判断是否为null，不为null，计数累加；有not null约束的话，InnoDB引擎会遍历整张表把每一行的字段值都取出来，返回给服务层，直接按行进行累加
+- count(1)：InnoDB 引擎遍历整张表，但不取值。服务层对于返回的每一层，放一个数字 1 进去，直接按行进行累加
+- count(*)：InnoDB 引擎并不会把全部字段取出来，而是专门做了优化，不取值，服务层直接按行进行累加
+
+按效率排序：count(字段) < count(主键) < count(1) < count(*)，所以尽量使用 count(*)
+
+#### update优化（避免行锁升级为表锁）
+
+InnoDB 的行锁是针对索引加的锁，不是针对记录加的锁，并且该索引不能失效，否则会从行锁升级为表锁。
+
+如以下两条语句：
+`update student set no = '123' where id = 1;`，这句由于id有主键索引，所以只会锁这一行；
+`update student set no = '123' where name = 'test';`，这句由于name没有索引，所以会把整张表都锁住进行数据更新，解决方法是给name字段添加索引
+
+### 函数和触发器
+
+![image-20241028184257724](./assets/image-20241028184257724.png)
+
+#### 视图
+
+![image-20241028154921876](./assets/image-20241028154921876.png)
+
+![image-20241028160157018](./assets/image-20241028160157018.png)
+
+```mysql
+create table student(
+    id   int auto_increment comment '主键ID' primary key,
+    name varchar(10) null comment '姓名',
+    no   varchar(10) null comment '学号'
+)comment '学生表';
+```
+
+使用local check option 创建的视图会限制带有check option的选项，比如，v2视图是基于v1视图的，如果在v2视图创建的时候指定了检查选项为 cascaded，但是v1视图创建时未指定检查选项。 则在执行检查时，不仅会检查v2，还会级联检查v2的关联视图v1。
+
+```mysql
+create view v1 as select id,name from student where id < 15;
+create view v2 as select id,name from v1 where id >10;
+create view v3 as select id,name from v2 where id <30 with cascaded check option;
+create view v4 as select id,name from v3 where id > 5 and id < 14;
+
+insert into v4 values(40,'jack'); #失败 不满足v3
+insert into v4 values(10,'jack');# 失败 不满足v1
+```
+
+而cascaded 会级联检查所有父视图的所有条件。比如，v2视图是基于v1视图的，如果在v2视图创建的时候指定了检查选项为 local ，但是v1视图创 建时未指定检查选项。 则在执行检查时，知会检查v2，不会检查v2的关联视图v1。
+
+```mysql
+create view v1 as select id,name from student where id < 15;
+create view v2 as select id,name from v1 where id >10;
+create view v3 as select id,name from v2 where id <30 with local check option;
+create view v4 as select id,name from v3 where id > 5 and id < 14;
+
+insert into v4 values(40,'jack'); #失败
+insert into v4 values(10,'jack');# 成功
+```
+
+**如果不加入check option**，则可以添加不受where限制的数据。
+
+![image-20241028164752915](./assets/image-20241028164752915.png)![image-20241028165007025](./assets/image-20241028165007025.png)
+
+**存储过程略**
+
+#### 触发器
+
+![image-20241028174001336](./assets/image-20241028174001336.png)
+
+![image-20241028175118720](./assets/image-20241028175118720.png)
+
+**行级触发器**
+
+![image-20241028183744314](./assets/image-20241028183744314.png)
+
+![image-20241028184112090](./assets/image-20241028184112090.png)
+
+```mysql
+show triggers #展示触发器
+```
+
+### 锁
+
+分为全局锁，表锁，行锁三种类别
+
+![image-20241029134757365](./assets/image-20241029134757365.png)
+
+#### 全局锁
+
+Global Lock 是对整个数据库加锁，通常在备份数据时使用，防止数据修改。MySQL 使用`FLUSH TABLES WITH READ LOCK`命令可以加全局读锁，此时所有数据都变为只读状态。
+
+![image-20241028190101098](./assets/image-20241028190101098.png)
+
+<img src="./assets/image-20241028191408314.png" alt="image-20241028191408314" style="zoom: 67%;" />
+
+![image-20241028191716077](./assets/image-20241028191716077.png)
+
+![image-20241028191726868](./assets/image-20241028191726868.png)
+
+#### 表级锁
+
+主要对表进行操作，不会对具体行产生影响。MySQL 中表级锁包括以下几种：
+
+- **表共享读锁（Shared Read Lock）**：允许多个用户同时读取表，不允许写入。
+- **表独占写锁（Exclusive Write Lock）**：允许一个事务对表进行写操作，其他事务无法访问该表。
+- **意向锁（Intention Locks）**：分为意向共享锁（IS）和意向排他锁（IX），表示事务意图操作的锁，在表级别上锁定，便于与行锁兼容控制。
+- **元数据锁（metadata Lock）**：自动管理，保护表结构的一致性
+
+![image-20241028192355103](./assets/image-20241028192355103.png)
+
+![image-20241029122425935](./assets/image-20241029122425935.png)
+
+```mysql
+select object_type,object_name,object_schema,lock_type,lock_duration from performance_schema.metadata_locks; #查看元数据锁
+```
+
+![image-20241029124822588](./assets/image-20241029124822588.png)
+
+意向共享锁(IS):由语句 select...lock in share mode添加。与表锁共享锁(read)兼容，与表锁排它锁(write)互斥。
+意向排他锁(IX):由insert、update、delete、select...for update 添加。与表锁共享锁(read)及排它锁(write)都互斥。意向锁之间不会互斥.
+
+```mysql 
+select object_type,object_name,object_schema,lock_type,lock_duration from performance_schema.data_locks; #查看意向锁
+```
+
+#### 行级锁
+
+行级锁是粒度最小的锁，仅对特定行加锁，适合高并发环境。InnoDB 存储引擎支持行级锁，包括：
+
+- **行锁(Record Lock)**:锁定单个行记录的锁，防止其他事务对此行进行update和delete。在RC、RR隔离级别下都支持。
+- **间隙锁（Gap Lock）**：用于锁定行之间的间隙，防止其他事务在范围内插入数据，避免幻读。RR下都支持
+- **临键锁（Next-Key Lock）**：是行锁和间隙锁的组合，锁定行和间隙区域，防止同一范围内的并发写操作。RR隔离级别下支持。
+
+**共享锁(S)**:允许一个事务去读一行，阻止其他事务获得相同数据集的排它锁。
+**排他锁(X)**:允许获取排他锁的事务更新数据，阻止其他事务获得相同数据集的共享锁和排他锁
+
+![image-20241029130816850](./assets/image-20241029130816850.png)
+
+默认情况下，InnoDB在 REPEATABLE READ事务隔离级别运行，InnoDB使用 next-key锁进行搜索和索引扫描，以防止幻读。
+
+- 针对唯一索引进行检索时，对已存在的记录进行等值匹配时，将会自动优化为行锁。
+
+- InnoDB的行锁是针对于索引加的锁，**不通过索引条件检索数据**，那么InnoDB将**对表中的所有记录加锁**，此时 就会升级为表锁。
+
+![image-20241029132650054](./assets/image-20241029132650054.png)
+
+注意:间隙锁唯一目的是防止其他事务插入间隙。间隙锁可以共存，一个事务采用的间隙锁不会阻止另一个事务在同一间隙上采用间隙锁。
+
+### InnoDB 引擎
+
+#### 逻辑存储结构
+
+![image-20241029134946079](./assets/image-20241029134946079.png)
+
+- 表空间(ibd文件)，一个mysql实例可以对应多个表空间，用于存储记录、索引等数据
+
+- 段，分为数据段(Leafnodesegment)、索引段(Non-leafnodesegment)、回滚段(Rollbacksegment)，InnoDB是索引组织表，数据段就是B+树的叶子节点，索引段即为B+树的非叶子节点。段用来管理多个Extent(区)
+
+- 表空间的单元结构，每个区的大小为1M。默认情况下，InnoDB存储引擎页大小为16K，即一个区中一共有64个连续的页。
+
+- 页，是InnoD8 存储引擎磁盘管理的最小单元，每个页的大小默认为16KB。为了保证页的连续性，InnoD8 存储引擎每次从磁盘申请 4-5 个页
+
+- 行，InnoDB按行存放数据。
+
+  Trx_id:每次对某条记录进行改动时，都会把对应的事务id赋值给trx_id隐藏列。
+  Roll_pointer:每次对某条引记录进行改动时，都会把旧的版本写入到undo日志中，然后这个隐藏列就相当于一个指针，可以通过它来找到该记录修改前的信息
+
+#### 架构
+
+![image-20241029141959842](./assets/image-20241029141959842.png)
+
+##### **内存架构 : In-Memory Structures** 
+
+***Buffer Pool***: 缓冲池是主内存中的一个区域，里面可以缓存磁盘上经常操作的真实数据，在执行增删改查操作时，先操作缓冲池中的数据(若缓冲池没有数据，则从磁盘加载并缓存)，然后再以一定频率刷新到磁盘，从而减少磁盘10，加快处理速度。缓冲池以Page页为单位，底层采用链表数据结构管理Page。根据状态，将Page分为三种类型
+
+- free page:空闲page，未被使用。
+- clean page:被使用page，数据没有被修改过。
+- dirty page:脏页，被使用page，数据被修改过，也中数据与磁盘的数据产生了不一致。
+
+***Change buffer*:** 更改缓冲区(针对于非唯一二级索引页)，在执行DML语句时，如果这些数据Page没有在BufferPool中，不会直接操作磁盘，而会将数据变更存在更改缓冲区Change Buffer 中，在未来数据被读取时，再将数据合并恢复到BufferPool中，再将合并后的数据刷新到磁盘中。
+
+***Adaptive Hash Index:***自适应hash索引，用于优化对Buffer Pool数据的查询。InnoDB存储引擎会监控对表上各索引页的查询，如果观察到hash索引可以提升速度，则建立hash索引，称之为自适应hash索引。无需人工干预，是系统自动完成。`show variables like '%hash_index%';` 查看是否开启。
+
+***Log Buffer***:日志缓冲区，用来保存要写入到磁盘中的l0g日志数据(redolog、undolog)，默认大小为 16MB，日志缓冲区的日志会定期剧新到磁盘中。如果需要更新、插入或删除许多行的事务，增加日志缓冲区的大小可以节省磁盘1/0。参数:
+    `innodb log_buffer_size:缓冲区大小`
+    `innodb flush log_at trx_commit:日志刷新到磁盘时机`
+    	0:每秒将日志写入并刷新到磁盘一次。
+    	1:日志在每次事务提交时写入并刷新到磁盘
+    	2:日志在每次事务提交后写入，并每秒刷新到磁盘一次。
+
+##### 磁盘架构 On-Disk Structures
+
+***System Tablespace***:系统表空间是更改缓冲区的存储区域。如果表是在系统表空间而不是每个表文件或通用表空间中创建的，它也可能包含表和索引数据。(在MVSQL5.x版本中还包含InnoDB数据字典、undolog等)
+
+***File-Per-Table Tablespaces***:每个表的文件表空间包含单个InnoDB表的数据和索引，并存储在文件系统上的单个数据文件中。
+
+***Doublewrite Buffer Files:***双写缓冲区，innoDB引擎将数据页从Buffer Pool刷新到磁盘前，先将数据页写入双写缓冲区文件中，便于系统异常时恢复数据。
+
+***Redo Log***:重做日志，是用来实现事务的持久性。该日志文件由两部分组成:重做日志缓冲(redo logbuffer)以及重做日志文件(redo log),前者是在内存中，后者在磁盘中。当事务提交之后会把所有修改信息都会存到该日志中,用于在刷新脏页到磁盘时,发生错误时,进行数据恢复使用。
+
+##### 后台线程
+
+![image-20241029145109392](./assets/image-20241029145109392.png)
+
+#### 事务原理
+
+为了保证事物的ACID特性，通过redo log ,undo log ，锁, MVCC等手段来实现
+
+- Durable 持久性保证：redo log ,重做日志，记录的是事务提交时数据页的物理修改，是用来实现事务的持久性。该日志文件由两部分组成:重做日志缓冲(redolog buffer)以及重做日志文件(redolog file),前者是在内存中，后者在磁盘中。当事务提交之后会把所有修改信息都存到该日志文件中,用于**在刷新脏页到磁盘,发生错误时,进行数据恢复使用**。
+
+- Atomic 原子性： undo log, 回滚日志，用于记录数据被修改前的信息，作用包含两个:提供回滚 和 MVCC。undo log和redo log记录物理日志不一样，它是逻辑日志。可以认为当delete一条记录时，undolog中会记录一条对应的insert记录，反之亦然，当update一条记录时，它记录一条对应相反的update记录。当执行rolback时，就可以从undolog中的逻辑记录读取到相应的内容并进行回滚。
+  - Undolog销毁:undo log在事务执行时产生，事务提交时，并不会立即删除undo log，因为这些日志可能还用于MVCC
+  - Undolog存储:undo log采用段的方式进行管理和记录，存放在前面介绍的rolback segment 回滚段中，内部包含1024个undo log segment.
+
+#### MVCC
+
+![image-20241029150901365](./assets/image-20241029150901365.png)
+
+![image-20241029151558429](./assets/image-20241029151558429.png)
+
+![image-20241029152056184](./assets/image-20241029152056184.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3342,7 +3744,9 @@ cat file.name
 
 【常用参数】
 
-    -n显示行号。
+```
+-n显示行号。
+```
 
 **less：分页显示文件内容，更适合查看大的文件**。
 
@@ -3350,27 +3754,29 @@ less file.name
 
 【快捷操作】
 
-    空格键：前进一页（一个屏幕）；
-    
-    b 键：后退一页；
-    
-    回车键：前进一行；
-    
-    y 键：后退一行；
-    
-    上下键：回退或前进一行；
-    
-    d 键：前进半页；
-    
-    u 键：后退半页；
-    
-    q 键：停止读取文件，中止less命令；
-    
-    = 键：显示当前页面的内容是文件中的第几行到第几行以及一些其它关于本页内容的详细信息；
-    
-    h 键：显示帮助文档；
-    
-    / 键：进入搜索模式后，按 n 键跳到一个符合项目，按 N 键跳到上一个符合项目，同时也可以输入正则表达式匹配。
+```
+空格键：前进一页（一个屏幕）；
+
+b 键：后退一页；
+
+回车键：前进一行；
+
+y 键：后退一行；
+
+上下键：回退或前进一行；
+
+d 键：前进半页；
+
+u 键：后退半页；
+
+q 键：停止读取文件，中止less命令；
+
+= 键：显示当前页面的内容是文件中的第几行到第几行以及一些其它关于本页内容的详细信息；
+
+h 键：显示帮助文档；
+
+/ 键：进入搜索模式后，按 n 键跳到一个符合项目，按 N 键跳到上一个符合项目，同时也可以输入正则表达式匹配。
+```
 
 **mkdir 创建目录**
 
@@ -3398,8 +3804,10 @@ Linux 下有两种链接类型：硬链接和软链接。
 
 硬链接
 
-    使链接的两个文件共享同样文件内容，就是同样的 inode ，一旦文件 1 和文件 2 之间有了硬链接，那么修改任何一个文件，修改的都是同一块内容，它的缺点是，只能创建指向文件的硬链接，不能创建指向目录的（其实也可以，但比较复杂）而软链接都可以，因此软链接使用更加广泛。
-    ln file1 file2  --> 创建 file2 为 file1 的硬链接  
+```
+使链接的两个文件共享同样文件内容，就是同样的 inode ，一旦文件 1 和文件 2 之间有了硬链接，那么修改任何一个文件，修改的都是同一块内容，它的缺点是，只能创建指向文件的硬链接，不能创建指向目录的（其实也可以，但比较复杂）而软链接都可以，因此软链接使用更加广泛。
+ln file1 file2  --> 创建 file2 为 file1 的硬链接  
+```
 
 软链接就类似 windows 下快捷方式。
 
@@ -3436,19 +3844,21 @@ chmod 740 file.txt
 
 用字母来分配权限
 
-    u：user 的缩写，用户的意思，表示所有者。
-    
-    g ：group 的缩写，群组的意思，表示群组用户。
-    
-    o ：other 的缩写，其它的意思，表示其它用户。
-    
-    a ：all 的缩写，所有的意思，表示所有用户。
-    
-    + ：加号，表示添加权限。
-    
-    - ：减号，表示去除权限。
-    
-    = ：等于号，表示分配权限。
+```
+u：user 的缩写，用户的意思，表示所有者。
+
+g ：group 的缩写，群组的意思，表示群组用户。
+
+o ：other 的缩写，其它的意思，表示其它用户。
+
+a ：all 的缩写，所有的意思，表示所有用户。
+
++ ：加号，表示添加权限。
+
+- ：减号，表示去除权限。
+
+= ：等于号，表示分配权限。
+```
 
 > chmod u+rx file --> 文件file的所有者增加读和运行的权限  
 > chmod g+r file --> 文件file的群组用户增加读的权限  
@@ -3462,18 +3872,22 @@ chmod 740 file.txt
 
 **tar 创建一个tar归档。**
 
-    tar -cvf sort.tar sort/ # 将sort文件夹归档为sort.tar  
-    tar -cvf archive.tar file1 file2 file3 # 将 file1 file2 file3 归档为archive.tar  
+```
+tar -cvf sort.tar sort/ # 将sort文件夹归档为sort.tar  
+tar -cvf archive.tar file1 file2 file3 # 将 file1 file2 file3 归档为archive.tar  
+```
 
 常用参数
 
-    -cvf 表示 create（创建）+ verbose（细节）+ file（文件），创建归档文件并显示操作细节；
-     
-    -tf  显示归档里的内容，并不解开归档；
-    
-    -rvf 追加文件到归档，tar -rvf archive.tar file.txt；
-    
-    -xvf 解开归档，tar -xvf archive.tar。
+```
+-cvf 表示 create（创建）+ verbose（细节）+ file（文件），创建归档文件并显示操作细节；
+ 
+-tf  显示归档里的内容，并不解开归档；
+
+-rvf 追加文件到归档，tar -rvf archive.tar file.txt；
+
+-xvf 解开归档，tar -xvf archive.tar。
+```
 
 **gzip / gunzip “压缩 / 解压” 归档**，默认用gzip命令，压缩后的文件后缀名为.tar.gz。
 
@@ -3555,10 +3969,12 @@ systemctl start etcd
 
 通过 sudo apt install 命令安装的软件包的位置可能会因软件包的类型和配置而有所不同。一般情况下，使用 apt 命令安装的软件包会被存储在以下位置：
 
-    可执行文件：在 /usr/bin 目录下，这是系统范围内可执行文件的主要存放位置。
-    配置文件：在 /etc 目录下，大多数软件的配置文件都会存储在这个目录中。
-    库文件：在 /usr/lib 或 /usr/lib64 目录下，这里存放了共享库文件（动态链接库）。
-    文档和帮助文件：在 /usr/share/doc 或 /usr/share/man 目录下，这里存放了软件包的文档和帮助文件。
+```
+可执行文件：在 /usr/bin 目录下，这是系统范围内可执行文件的主要存放位置。
+配置文件：在 /etc 目录下，大多数软件的配置文件都会存储在这个目录中。
+库文件：在 /usr/lib 或 /usr/lib64 目录下，这里存放了共享库文件（动态链接库）。
+文档和帮助文件：在 /usr/share/doc 或 /usr/share/man 目录下，这里存放了软件包的文档和帮助文件。
+```
 
 ### Common Path 
 
