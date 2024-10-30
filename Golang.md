@@ -3499,6 +3499,8 @@ select object_type,object_name,object_schema,lock_type,lock_duration from perfor
 
 ### InnoDB 引擎
 
+![image-20241029162029175](./assets/image-20241029162029175.png)
+
 #### 逻辑存储结构
 
 ![image-20241029134946079](./assets/image-20241029134946079.png)
@@ -3563,6 +3565,8 @@ select object_type,object_name,object_schema,lock_type,lock_duration from perfor
   - Undolog销毁:undo log在事务执行时产生，事务提交时，并不会立即删除undo log，因为这些日志可能还用于MVCC
   - Undolog存储:undo log采用段的方式进行管理和记录，存放在前面介绍的rolback segment 回滚段中，内部包含1024个undo log segment.
 
+![image-20241029161915938](./assets/image-20241029161915938.png)
+
 #### MVCC
 
 ![image-20241029150901365](./assets/image-20241029150901365.png)
@@ -3571,29 +3575,27 @@ select object_type,object_name,object_schema,lock_type,lock_duration from perfor
 
 ![image-20241029152056184](./assets/image-20241029152056184.png)
 
+![image-20241029155940317](./assets/image-20241029155940317.png)
 
+![image-20241029160657455](./assets/image-20241029160657455.png)
 
+![image-20241029160817450](./assets/image-20241029160817450.png)
 
+不同的隔离级别，生成Readview的时机不同,下方是访问数据的版本控制流程,分为两种情况.
 
+- **READ COMMITTED** :在事务中每一次执行快照读时生成ReadView。
 
+<img src="./assets/image-20241029161348919.png" alt="image-20241029161348919" style="zoom:150%;" />
 
+首先建立读视图,设定访问规则如1234,然后从最新记录开始查询该版本号是否匹配,不匹配则沿RollPtr进行搜索知道满足条件的版本出现
 
+- **REPEATABLE READ**:仅在事务中第一次执行快照读时生成ReadView，**后续复用该ReadView**。
 
+### 其他工具
 
+![image-20241029171307615](./assets/image-20241029171307615.png)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+![image-20241029172938821](./assets/image-20241029172938821.png)
 
 ## Docker
 
