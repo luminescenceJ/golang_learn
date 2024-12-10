@@ -90,6 +90,7 @@ const (
 )
 ```
 
+
 第一个 `iota` 等于 0，每当 `iota` 在新的一行被使用时，它的值都会自动加 1，并且没有赋值的常量默认会应用上一行的赋值表达式：
 
 ```go
@@ -193,15 +194,18 @@ const (
 
 **一元运算符**
 
-- 按位补足 `^`：
+- 按位取反 `^`：*该运算符与异或运算符一同使用，即 `m^x`，对于无符号 `x` 使用 “全部位设置为 1” 的规则，对于有符号 `x` 时使用 `m=-1`*。在计算机中，正数负数都以的补码形式存在。而正数补码等于源码。
 
-  该运算符与异或运算符一同使用，即 `m^x`，对于无符号 `x` 使用 “全部位设置为 1” 的规则，对于有符号 `x` 时使用 `m=-1`。例如：
-
+  ```go
+  ^10 = -01 ^ 10 = -11 //十进制示意
+  // 二进制与十进制关系：补码表示法
+  // 正数的补码和原码相同。负数的补码是其原码按位取反后，加 1。
+  // 10 = 0000 1010 , ^10 = 1111 0101 是负数
+  // 1111 0101 的补码是0000 1011 
+  // 负数的表示：取补码加负号 即binary(0000 1011) = 11, binary(1111 0101) = -11 = ^10
   ```
-    ^10 = -01 ^ 10 = -11
-  ```
 
-  
+  符号位的变化使得按位取反后的数值遵循 `^a = -(a + 1)` 的规律（对于有符号整数）。
 
 - 位左移 `<<`：
 
@@ -255,6 +259,68 @@ const (
 
 flag := Active | Send // == 3
 ```
+
+#### 常见的进制前缀表示
+
+| 前缀   | 进制             | 示例                 | 说明                           |
+| ------ | ---------------- | -------------------- | ------------------------------ |
+| `0x`   | 十六进制 (Hex)   | `0x1F` (31 十进制)   | `x` 大小写均可，表示 16 进制。 |
+| `0`    | 八进制 (Octal)   | `075` (61 十进制)    | 不推荐使用，部分语言已弃用。   |
+| `0b`   | 二进制 (Binary)  | `0b1011` (11 十进制) | 表示 2 进制，`b` 大小写均可。  |
+| `0o`   | 八进制 (Octal)   | `0o71` (57 十进制)   | 更清晰的八进制表示 (Python)。  |
+| 无前缀 | 十进制 (Decimal) | `42`                 | 默认数值形式 (10 进制)。       |
+
+`\0` 开头，后跟 1-3 位八进制数。如`\101` 表示 `A`。
+
+**`\u`** 前缀表示，4 位十六进制数，表示 BMP 范围字符（范围：`0000` 到 `FFFF`）。
+
+ ```go 
+ fmt.Println("\u4F60") // 输出：你
+ ```
+
+**`\U`** 总是跟 8 位十六进制数，表示完整 Unicode 范围，包括超出 BMP 的字符。
+
+```
+var ch int = '\u0041'
+var ch2 int = '\u03B2'
+var ch3 int = '\U00101234'
+fmt.Printf("%d - %d - %d\n", ch, ch2, ch3) // integer 65 - 946 - 1053236
+fmt.Printf("%c - %c - %c\n", ch, ch2, ch3) // character A - β - r
+fmt.Printf("%X - %X - %X\n", ch, ch2, ch3) // UTF-8 bytes 41 - 3B2 - 101234
+fmt.Printf("%U - %U - %U", ch, ch2, ch3) // UTF-8 code point U+0041 - U+03B2 - U+101234
+```
+
+#### 闭包
+
+闭包是一个可以捕获其外部作用域（环境）变量的函数。它使得函数能够“记住”它创建时的外部状态，并在调用时继续访问和操作这些变量。这些被捕获的变量会随着闭包一起存在，直到闭包被销毁。闭包会保持对这些变量的引用，因此这些变量不会被销毁，直到闭包本身被销毁。
+
+```go
+func main() {
+    // 创建一个闭包
+    counter := createCounter()
+    // 调用闭包，修改内部变量
+    fmt.Println(counter()) // 输出: 1
+    fmt.Println(counter()) // 输出: 2
+    fmt.Println(counter()) // 输出: 3
+}
+// 返回一个闭包
+func createCounter() func() int {
+    count := 0
+    // 这个匿名函数会捕获 `count` 变量
+    return func() int {
+        count++
+        return count
+    }
+}
+```
+
+通过闭包可以实现只能用函数制定的方式操作变量，比如add()等
+
+- **闭包**是一个函数，它不仅包括函数的代码，还包含对外部作用域中变量的引用。
+
+- 它允许函数“记住”并操作创建它时的状态，直到闭包本身被销毁。
+
+- 闭包广泛应用于数据封装、回调函数、延迟执行等场景。
 
 
 
@@ -345,7 +411,115 @@ fmt.Printf("%d %[1]x %#[1]x %#[1]X\n", x)
 
 请注意fmt的两个使用技巧。通常Printf格式化字符串包含多个%参数时将会包含对应相同数量的额外操作数，但是%之后的`[1]`副词告诉Printf函数再次使用第一个操作数。第二，%后的`#`副词告诉Printf在用%o、%x或%X输出时生成0、0x或0X前缀。
 
+####  `strings` 和 `strconv` 包
 
+`HasPrefix()` 判断字符串 `s` 是否以 `prefix` 开头：
+
+```go
+strings.HasPrefix(s, prefix string) bool
+```
+
+`HasSuffix()` 判断字符串 `s` 是否以 `suffix` 结尾：
+
+```go
+strings.HasSuffix(s, suffix string) bool
+```
+
+`Contains()` 判断字符串 `s` 是否包含 `substr`：
+
+```go
+strings.Contains(s, substr string) bool
+```
+
+`Index()` 返回字符串 `str` 在字符串 `s` 中的索引（`str` 的第一个字符的索引），`-1` 表示字符串 `s` 不包含字符串 `str`：
+
+```
+strings.Index(s, str string) int
+```
+
+`LastIndex()` 返回字符串 `str` 在字符串 `s` 中最后出现位置的索引（`str` 的第一个字符的索引），`-1` 表示字符串 `s` 不包含字符串 `str`：
+
+```
+strings.LastIndex(s, str string) int
+```
+
+`Replace()` 用于将字符串 `str` 中的前 `n` 个字符串 `old` 替换为字符串 `new`，并返回一个新的字符串，如果 `n = -1` 则替换所有字符串 `old` 为字符串 `new`：
+
+```
+strings.Replace(str, old, new string, n int) string
+```
+
+`Count()` 用于计算字符串 `str` 在字符串 `s` 中出现的非重叠次数：
+
+```
+strings.Count(s, str string) int
+```
+
+`Repeat()` 用于重复 `count` 次字符串 `s` 并返回一个新的字符串：
+
+```
+strings.Repeat(s, count int) string
+```
+
+`ToLower()` 将字符串中的 Unicode 字符全部转换为相应的小写字符：
+
+```
+strings.ToLower(s) string
+```
+
+`Join()` 用于将元素类型为 string 的 slice 使用分割符号来拼接组成一个字符串：
+
+```go
+strings.Join(sl []string, sep string) string //在数组间添加sep连接为字符串，对应的是Split相同用法
+```
+
+```go
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+func main() {
+	str := "The quick brown fox jumps over the lazy dog"
+	sl := strings.Fields(str)
+	fmt.Printf("Splitted in slice: %v\n", sl)
+	for _, val := range sl {
+		fmt.Printf("%s - ", val)
+	}
+	fmt.Println()
+	str2 := "GO1|The ABC of Go|25"
+	sl2 := strings.Split(str2, "|")
+	fmt.Printf("Splitted in slice: %v\n", sl2)
+	for _, val := range sl2 {
+		fmt.Printf("%s - ", val)
+	}
+	fmt.Println()
+	str3 := strings.Join(sl2,";")
+	fmt.Printf("sl2 joined by ;: %s\n", str3)
+}    
+```
+
+输出：
+
+```
+Splitted in slice: [The quick brown fox jumps over the lazy dog]
+The - quick - brown - fox - jumps - over - the - lazy - dog -
+Splitted in slice: [GO1 The ABC of Go 25]
+GO1 - The ABC of Go - 25 -
+sl2 joined by ;: GO1;The ABC of Go;25
+```
+
+**字符串和数字的转换：**
+
+`strconv.Itoa(i int) string` 返回数字 `i` 所表示的字符串类型的十进制数。
+
+`strconv.Atoi(s string) (i int, err error)` 将字符串转换为 `int` 型。
+
+`strconv.ParseFloat(s string, bitSize int) (f float64, err error)` 将字符串转换为 `float64` 型。
+
+`strconv.FormatFloat(f float64, fmt byte, prec int, bitSize int) string` 将 64 位浮点型的数字转换为字符串，其中 `fmt` 表示格式（其值可以是 `'b'`、`'e'`、`'f'` 或 `'g'`），`prec` 表示精度，`bitSize` 则使用 32 表示 `float32`，用 64 表示 `float64`。
 
 #### 输入：`bufio` 包
 
@@ -409,6 +583,22 @@ func main() {
 >%v          变量的自然形式（natural format）
 >%T          变量的类型
 >%%          字面上的百分号标志（无操作数）
+
+#### 时间：`time`包
+
+`time` 包为我们提供了一个数据类型 `time.Time`（作为值使用）以及显示和测量时间和日期的功能函数。
+
+当前时间可以使用 `time.Now()` 获取，或者使用 `t.Day()`、`t.Minute()` 等等来获取时间的一部分；你甚至可以自定义时间格式化字符串，例如： `fmt.Printf("%02d.%02d.%4d\n", t.Day(), t.Month(), t.Year())` 将会输出 `21.07.2011`。
+
+`Duration` 类型表示两个连续时刻所相差的纳秒数，类型为 `int64`。`Location` 类型映射某个时区的时间，UTC 表示通用协调世界时间。
+
+一般的格式化设计是通过对于一个标准时间的格式化描述来展现的，这听起来很奇怪（`02 Jan 2006 15:04` 是 Go 语言的诞生时间且自定义格式化时必须以此时间为基准），但看下面这个例子你就会一目了然：
+
+```
+fmt.Println(t.Format("02 Jan 2006 15:04")) 
+```
+
+
 
 ####  二叉树实现插入排序
 
@@ -2245,6 +2435,136 @@ func isBalanced(n Node)bool{
 
 边界条件设置为空树{0,0,true}
 
+### 回溯
+
+#### N皇后1
+
+按照国际象棋的规则，皇后可以攻击与之处在同一行或同一列或同一斜线上的棋子。
+
+**n 皇后问题** 研究的是如何将 `n` 个皇后放置在 `n×n` 的棋盘上，并且使皇后彼此之间不能相互攻击。
+
+给你一个整数 `n` ，返回所有不同的 **n 皇后问题** 的解决方案。
+
+每一种解法包含一个不同的 **n 皇后问题** 的棋子放置方案，该方案中 `'Q'` 和 `'.'` 分别代表了皇后和空位。
+
+![img](https://assets.leetcode.com/uploads/2020/11/13/queens.jpg)
+
+**示例 1：**
+
+```
+输入：n = 4
+输出：[[".Q..","...Q","Q...","..Q."],["..Q.","Q...","...Q",".Q.."]]
+解释：如上图所示，4 皇后问题存在两个不同的解法。
+```
+
+**示例 2：**
+
+```
+输入：n = 1
+输出：[["Q"]]
+```
+
+
+
+```go
+func solveNQueens(n int) [][]string {
+	solutions := [][]string{}
+	queens := make([]int, n) // queen[i]为第i行放置皇后的列数
+	for i := 0; i < n; i++ {
+		queens[i] = -1
+	}
+	rowBanned := make([]bool, n)         // 这些列上放过皇后
+	leftBanned := make(map[int]bool, n)  // 这些主对角线放过（行列之差为常数)
+	rightBanned := make(map[int]bool, n) // 副对角线 (行列数之和为常数)
+
+	// 回溯  扫描每行 避开每列和左右上角
+	var backtrack func(row int)
+	backtrack = func(row int) {
+		if row == n { // n到了最后一行下面，已经满足
+			tmp := make([]string, n)
+			for i := 0; i < n; i++ {
+				str := ""
+				for j := 0; j < n; j++ {
+					if queens[i] == j {
+						str += "Q"
+					} else {
+						str += "."
+					}
+				}
+				tmp[i] = str
+			}
+			solutions = append(solutions, tmp)
+			return
+		}
+		// 扫描列，如果满足进下一行，不满足就退出
+		for i := 0; i < n; i++ {
+			if rowBanned[i] {
+				continue
+			}
+			leftDiagonalMinus := row - i
+			if leftBanned[leftDiagonalMinus] {
+				continue
+			}
+			rightDiagonalSum := row + i
+			if rightBanned[rightDiagonalSum] {
+				continue
+			}
+			queens[row] = i
+			rowBanned[i] = true
+			leftBanned[leftDiagonalMinus] = true
+			rightBanned[rightDiagonalSum] = true
+			backtrack(row + 1)
+			rightBanned[rightDiagonalSum] = false
+			leftBanned[leftDiagonalMinus] = false
+			rowBanned[i] = false
+			queens[row] = -1
+		}
+
+	}
+	backtrack(0)
+	return solutions
+
+}
+```
+
+#### N皇后2
+
+**n 皇后问题** 研究的是如何将 `n` 个皇后放置在 `n × n` 的棋盘上，并且使皇后彼此之间不能相互攻击。
+
+给你一个整数 `n` ，返回 **n 皇后问题** 不同的解决方案的数量。
+
+>1的做法也可以解，这里用位运算节约空间。
+>
+>每次放置皇后时，三个整数的按位或运算的结果即为不能放置皇后的位置，其余位置即为可以放置皇后的位置。可以通过 (2n−1) & (∼(columns∣diagonals1∣diagonals2)) 得到可以放置皇后的位置（该结果的值为 1 的位置表示可以放置皇后的位置），然后遍历这些位置，尝试放置皇后并得到可能的解。
+>
+>遍历可以放置皇后的位置时，可以利用以下两个按位与运算的性质：
+>
+>    x & (−x) 可以获得 x 的二进制表示中的最低位的 1 的位置；
+>    
+>    x & (x−1) 可以将 x 的二进制表示中的最低位的 1 置成 0。
+>
+
+```go
+func totalNQueens(n int) (ans int) {
+	var solve func(int, int, int, int)
+	solve = func(row, columns, diagonals1, diagonals2 int) {
+		if row == n {
+			ans++
+			return
+		}
+		availablePositions := (1<<n - 1) &^ (columns | diagonals1 | diagonals2)
+		for availablePositions > 0 {
+			position := availablePositions & -availablePositions
+			solve(row+1, columns|position, (diagonals1|position)<<1, (diagonals2|position)>>1)
+			availablePositions &^= position // 移除该比特位
+		}
+	}
+	solve(0, 0, 0, 0)
+	return ans
+}
+
+```
+
 ### 图
 
 #### 通用数据结构
@@ -2592,8 +2912,6 @@ func getMinDistAndUnselected(distanceMap map[*Node]int, touchedNodes map[*Node]b
 
 - 绿色的是字典(map)，存储键和值的映射关系。这样根据某个键(key)查找对应的值(value)的复杂是`O(1)`，在字典中插入一条记录的复杂度也是`O(1)`。
 - 红色的是双向链表(double linked list)实现的队列。将所有的值放到双向链表中，这样，当访问到某个值时，将其移动到队尾的复杂度是`O(1)`，在队尾新增一条记录以及删除一条记录的复杂度均为`O(1)`。
-
-
 
 ### Golang包
 
