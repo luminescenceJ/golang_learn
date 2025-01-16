@@ -2328,11 +2328,36 @@ func compare(list []int) []int {
 
 对于 `arr=[5,8,5,2,9]` ，我们知道第一遍选择第1个元素5会和2交换，那么原序列中两个5的相对前后顺序就被破坏了，所以选择排序是一个不稳定的排序算法。
 
+#### 插入排序
+
+时间复杂度O(n2) 空间复杂度O(1)
+
+```go
+func insertSort(nums []int) {
+    if nums == nil || len(nums) <= 1 {
+       return
+    }
+    //对第i个数，将其插入到前i-1个有序数组的某一位置
+    //对于增序排列，遍历从i=j+1一直到比它小的第一个数进行插入，如果比它大就交换位置
+    for i := 1; i < len(nums); i++ {
+       for j := i - 1; j >= 0 && nums[j] > nums[j+1]; j-- {
+          swap(nums, j, j+1)
+       }
+    }
+}
+//交换i和j位置元素，不使用新内存
+func swap(nums []int, i, j int) {
+    nums[i] = nums[i] ^ nums[j]
+    nums[j] = nums[i] ^ nums[j]
+    nums[i] = nums[i] ^ nums[j]
+}
+```
+
 
 
 #### 快速排序
 
-1.hoare方法(常见，1.0版本)
+##### hoare方法
 
 其单趟排序的思路是：取区间中最左或最右边的元素为key，定义两个变量，这里假设是i和j，j从区间的最右边向左走，找到比key小的元素就停下。i从最左边向右走，找到比key大的元素就停下。然后交换i和j所指向的元素，重复上面的过程，直到i,j相遇，此时i,j相遇的位置就是key排序后待的位置。
 
@@ -2345,7 +2370,6 @@ func compare(list []int) []int {
 >本质就是将<=区逐渐向右扩展，直到数组索引越界
 >
 >实现方式为将数组中第一个数设为pivot，将大于和小于它的数从中间分开变为[ piovt,{小于},{大于}]，然后将piovt和小于区最右边的一个数进行交换。得到[{小于},piovt,{大于}]，然后分别对{小于}{大于}在使用该算法(哨兵分区，再将哨兵放到中间)
->
 >
 
 ```
@@ -2396,7 +2420,7 @@ func QuickSort(arr []int, left, right int) int {
 }
 ```
 
-3.快慢指针法
+##### 快慢指针法
 
 取最左边的数为key，定义两个快慢指针，都从key的下一位往右走，fast每走一步判断一下它指向的元素是否小于key，若小于则交换fast和slow位置的元素，并且让slow向前走，直到fast走到底，结束循环。最后让slow和key位置的值交换。再返回key的位置。
 
@@ -2427,7 +2451,7 @@ func QuickSort(arr []int, left, right int) {
 }
 ```
 
-快排2.0版本(荷兰国旗)
+##### 快排2.0版本(荷兰国旗)
 
 ![image-20231206211848773](./assets/image-20231206211848773-1729756856422-15.png)数组按哨兵分为三部分，然后将哨兵交换放到大于区的第一个位置
 
@@ -2437,34 +2461,44 @@ func QuickSort(arr []int, left, right int) {
 
 ![image-20231206212115256](./assets/image-20231206212115256-1729756858955-19.png)
 
-快排3.0，随机选择一个数交换在最右边，从而实现统计上的O（n*logn）
+##### 快排3.0
 
-#### 插入排序
-
-时间复杂度O(n2) 空间复杂度O(1)
+随机选择一个数交换在最右边，从而实现统计上的O（n*logn）
 
 ```go
-func insertSort(nums []int) {
-    if nums == nil || len(nums) <= 1 {
-       return
-    }
-    //对第i个数，将其插入到前i-1个有序数组的某一位置
-    //对于增序排列，遍历从i=j+1一直到比它小的第一个数进行插入，如果比它大就交换位置
-    for i := 1; i < len(nums); i++ {
-       for j := i - 1; j >= 0 && nums[j] > nums[j+1]; j-- {
-          swap(nums, j, j+1)
-       }
-    }
+import "math/rand"
+
+func sortArray(nums []int) []int {
+  quick(&nums, 0, len(nums) - 1)
+  return nums
 }
-//交换i和j位置元素，不使用新内存
-func swap(nums []int, i, j int) {
-    nums[i] = nums[i] ^ nums[j]
-    nums[j] = nums[i] ^ nums[j]
-    nums[i] = nums[i] ^ nums[j]
+
+func quick(arr *([]int), i, j int) {
+  if i >= j {return}
+  mid := partition(arr, i, j)
+  quick(arr, i, mid - 1)
+  quick(arr, mid + 1, j)
+}
+
+func partition(arr *([]int), i int, j int) int {
+  p := rand.Intn(j - i + 1) + i  // 随机选取“支点”
+  nums := *arr
+  nums[i], nums[p]  = nums[p], nums[i]
+  for i < j {
+    for nums[i] < nums[j] && i < j { j-- }  // 修改原来的 nums[j] >= nums[i]，增加交换频率
+    if (i < j) {
+      nums[i], nums[j] = nums[j], nums[i]
+      i++
+    }
+    for nums[i] < nums[j] && i < j { i++ }  // 修改原来的 nums[j] >= nums[i]，增加交换频率
+    if i < j {
+      nums[i], nums[j] = nums[j], nums[i]
+      j--
+    }
+  }
+  return i
 }
 ```
-
-
 
 #### 归并排序
 
@@ -2528,6 +2562,102 @@ func merge(nums []int, left, mid, right int) {
     for i := 0; i < len(temp); i++ {
        nums[left+i] = temp[i]
     }
+}
+```
+
+```go
+// 递归实现归并算法
+func sortArray(nums []int) []int {
+	// 归并排序，基于比较，稳定算法，时间O(nlogn)，空间O(logn) | O(n)
+	// 基于递归的归并-自上而下的合并，另有非递归法的归并(自下而上的合并)
+	// 都需要开辟一个大小为n的数组中转
+	// 将数组分为左右两部分，递归左右两块，最后合并，即归并
+	// 如在一个合并中，将两块部分的元素，遍历取较小值填入结果集
+	// 类似两个有序链表的合并，每次两两合并相邻的两个有序序列，直到整个序列有序
+	merge := func(left, right []int) []int {
+		res := make([]int, len(left)+len(right))
+		var l,r,i int
+		// 通过遍历完成比较填入res中
+		for l < len(left) && r < len(right) {
+			if left[l] <= right[r] {
+				res[i] = left[l]
+				l++
+			} else {
+				res[i] = right[r]
+				r++
+			}
+			i++
+		}
+		// 如果left或者right还有剩余元素，添加到结果集的尾部
+		copy(res[i:], left[l:])
+		copy(res[i+len(left)-l:], right[r:])
+		return res
+	}
+	var sort func(nums []int) []int
+	sort = func(nums []int) []int {
+		if len(nums) <= 1 {
+			return nums
+		}
+		// 拆分递归与合并
+		// 分割点
+		mid := len(nums)/2
+		left := sort(nums[:mid])
+		right := sort(nums[mid:])
+		return merge(left, right)
+	}
+	return sort(nums)
+}
+
+// 非递归实现归并算法
+func sortArray(nums []int) []int {
+	// 归并排序-非递归实现，利用变量，自下而上的方式合并
+	// 时间O(nlogn)，空间O(n)
+	if len(nums) <= 1 {return nums}
+	merge := func(left, right []int) []int {
+		res := make([]int, len(left)+len(right))
+		var l,r,i int
+		// 通过遍历完成比较填入res中
+		for l < len(left) && r < len(right) {
+			if left[l] <= right[r] {
+				res[i] = left[l]
+				l++
+			} else {
+				res[i] = right[r]
+				r++
+			}
+			i++
+		}
+		// 如果left或者right还有剩余元素，添加到结果集的尾部
+		copy(res[i:], left[l:])
+		copy(res[i+len(left)-l:], right[r:])
+		return res
+	}
+	i := 1 //子序列大小初始1
+	res := make([]int, 0)
+	// i控制每次划分的序列长度
+	for i < len(nums) {
+		// j根据i值执行具体的合并
+		j := 0
+		// 按顺序两两合并，j用来定位起始点
+		// 随着序列翻倍，每次两两合并的数组大小也翻倍
+		for j < len(nums) {
+			if j+2*i > len(nums) {
+				res = merge(nums[j:j+i], nums[j+i:])
+			} else {
+				res = merge(nums[j:j+i], nums[j+i:j+2*i])
+			}
+			// 通过index控制每次将合并的数据填入nums中
+			// 重填入的次数和合并及二叉树的高度相关
+			index := j
+			for _, v := range res {
+				nums[index] = v
+				index++
+			}
+			j = j + 2*i
+		}
+		i *= 2
+	}
+	return nums
 }
 ```
 
@@ -2619,11 +2749,123 @@ func main() {
 }
 ```
 
+
+
+```go
+// leetcode
+
+func sortArray(nums []int) []int {
+    // 堆排序-大根堆，升序排序，基于比较交换的不稳定算法，时间O(nlogn)，空间O(1)-迭代建堆
+	// 遍历元素时间O(n)，堆化时间O(logn)，开始建堆次数多些，后面次数少 
+	// 主要思路：
+	// 1.建堆，从非叶子节点开始依次堆化，注意逆序，从下往上堆化
+	// 建堆流程：父节点与子节点比较，子节点大则交换父子节点，父节点索引更新为子节点，循环操作
+	// 2.尾部遍历操作，弹出元素，再次堆化
+	// 弹出元素排序流程：从最后节点开始，交换头尾元素，由于弹出，end--，再次对剩余数组元素建堆，循环操作
+	// 建堆函数，堆化
+	var heapify func(nums []int, root, end int)
+	heapify = func(nums []int, root, end int) {
+		// 大顶堆堆化，堆顶值小一直下沉
+		for {
+			// 左孩子节点索引
+			child := root*2 + 1
+			// 越界跳出
+			if child > end {
+				return
+			}
+			// 比较左右孩子，取大值，否则child不用++
+			if child < end && nums[child] <= nums[child+1] {
+				child++
+			}
+			// 如果父节点已经大于左右孩子大值，已堆化
+			if nums[root] > nums[child] {
+				return
+			}
+			// 孩子节点大值上冒
+			nums[root], nums[child] = nums[child], nums[root]
+			// 更新父节点到子节点，继续往下比较，不断下沉
+			root = child
+		}
+	}
+	end := len(nums)-1
+	// 从最后一个非叶子节点开始堆化
+	for i:=end/2;i>=0;i-- {
+		heapify(nums, i, end)
+	}
+	// 依次弹出元素，然后再堆化，相当于依次把最大值放入尾部
+	for i:=end;i>=0;i-- {
+		nums[0], nums[i] = nums[i], nums[0]
+		end--
+		heapify(nums, 0, end)
+	}
+	return nums
+}
+```
+
 #### 桶排序
 
 一种特殊的排序算法，不属于比较排序。工作的原理是将数组分到有限数量的桶里。每个桶再个别排序（有可能再使用别的排序算法或是以递归方式继续使用桶排序进行排序），最后依次把各个桶中的记录列出来记得到有序序列。当要被排序的数组内的数值是均匀分配的时候，桶排序使用线性时间（Θ(n)）。但桶排序并不是比较排序，不受到O(n log n)下限的影响。
 
-**基数排序**
+```go
+func sortArray(nums []int) []int {
+    // 桶排序，基于哈希思想的外排稳定算法，空间换时间，时间O(n+k)
+	// 相当于计数排序的改进版，服从均匀分布，先将数据分到有限数量的桶中，
+	// 每个桶分别排序，最后将非空桶的数据拼接起来
+	var bucket func(nums []int, bucketSize int) []int
+	bucket = func(nums []int, bucketSize int) []int {
+		if len(nums) < 2 {
+			return nums
+		}
+		// 获取最大最小值
+		minAndMax := func(nums []int) (min, max int) {
+			minNum := math.MaxInt32
+			maxNum := math.MinInt32
+			for i:=0;i<len(nums);i++ {
+				if nums[i] < minNum {
+					minNum = nums[i]
+				}
+				if nums[i] > maxNum {
+					maxNum = nums[i]
+				}
+			}
+			return minNum, maxNum
+		}
+		min_, max_ := minAndMax(nums)
+		// 定义桶
+		// 构建计数桶
+		bucketCount := (max_-min_)/bucketSize + 1
+		buckets := make([][]int, bucketCount)
+		for i:=0;i<bucketCount;i++ {
+			buckets[i] = make([]int, 0)
+		}
+		// 装桶-排序过程
+		for i:=0;i<len(nums);i++ {
+			// 桶序号
+			bucketNum := (nums[i]-min_) / bucketSize
+			buckets[bucketNum] = append(buckets[bucketNum], nums[i])
+		}
+		// 桶中排序
+		// 上述装桶完成，出桶填入元素组
+		index := 0
+		for _, bucket := range buckets {
+			sort.Slice(bucket, func(i, j int) bool {
+				return bucket[i] < bucket[j]
+			})
+			for _, num := range bucket {
+				nums[index] = num
+				index++
+			}
+		}
+		return nums
+	}
+	// 定义桶中的数量
+	var bucketSize int = 2
+	return bucket(nums, bucketSize)
+}
+
+```
+
+#### 基数排序
 
 ```go
 // 桶排序之基数排序
@@ -2699,12 +2941,63 @@ func main() {
 
 **计数排序**
 
+>桶排序之计数排序
+>应用范围较窄，如统计职工年龄等范围较小的场景
+>年龄的范围属于[0,200]，因此建立hash表用作次数索引
+>arr[i]表示i岁的职工个数，遍历数组建立hash表后
+>取最小前缀和就是排序后的数组下标(降序排序)
+
 ```go
-// 桶排序之计数排序
-// 应用范围较窄，如统计职工年龄等范围较小的场景
-// 年龄的范围属于[0,200]，因此建立hash表用作次数索引
-// arr[i]表示i岁的职工个数，遍历数组建立hash表后
-// 取最小前缀和就是排序后的数组下标(降序排序)
+func sortArray(nums []int) []int {
+    // 计数排序，基于哈希思想的稳定外排序算法，空间换时间，时间O(n)，空间O(n)
+	// 数据量大时，空间占用大
+	// 空间换时间，通过开辟额外数据空间存储索引号记录数组的值和数组额个数
+	// 思路：
+	// 1.找出待排序的数组的最大值和最小值
+	// 2.创建数组存放各元素的出现次数，先于[min, max]之间
+	// 3.统计数组值的个数
+	// 4.反向填充数组，填充时注意,num[i]=j+min，
+	// j-前面需要略过的数的个数，两个维度，依次递增的数j++，一个是重复的数的计数j-不变
+	if len(nums) == 0 {
+		return nums
+	}
+	// 获取最大最小值
+	minAndMax := func(nums []int) (min,max int) {
+		minNum := math.MaxInt32
+		maxNum := math.MinInt32
+		for i:=0;i<len(nums);i++ {
+			if nums[i] < minNum {
+				minNum = nums[i]
+			}
+			if nums[i] > maxNum {
+				maxNum = nums[i]
+			}
+		}
+		return minNum, maxNum
+	}
+	min_, max_ := minAndMax(nums)
+	// 中转数组存放遍历元素
+	// 空间只需要min-max
+	tmpNums := make([]int, max_-min_+1)
+	// 遍历原数组
+	for i:=0;i<len(nums);i++ {
+		tmpNums[nums[i]-min_]++
+	}
+	// 遍历中转数组填入原数组
+	j := 0
+	for i:=0;i<len(nums);i++ {
+		// 如果对应数字cnt=0，说明可以计入下一位数字
+		for tmpNums[j] == 0 {
+			j++
+		}
+		// 填入数字
+		nums[i] = j + min_
+		// 填一个数字，对应数字cnt--
+		tmpNums[j]--
+	}
+	return nums
+}
+
 ```
 
 #### 工程上排序的优化
@@ -2855,6 +3148,193 @@ func LoopEntryNode(h *listNode) *listNode {
     return &listNode{fast}
 }
 ```
+
+### 跳表
+
+>跳表（Skip List）是一种用于实现有序数据结构的高效数据结构，常用于替代平衡树。它在常规的链表基础上增加了多层索引，使得查找操作能在 O(logn) 时间复杂度内完成，通常比平衡树（如 AVL 树、红黑树）实现要简单，且能提供良好的性能。
+>
+>跳表通过多级索引来减少查找的范围，每一层链表上的节点都指向下一层的节点，形成一个多级跳跃的结构。
+
+**多层链表**：跳表是一系列链表的集合，每个链表包含一个节点的指针，这些链表从底层到顶部逐渐减少。
+
+**节点结构**：每个节点有多个指针，指向不同层级的下一个节点。
+
+**插入与查找**：在跳表中，插入和查找操作都通过多层索引快速定位目标节点，平均时间复杂度为 O(log⁡n)。
+
+![img](./assets/webp.webp)
+
+>为什么Redis中的有序集合用跳表而非红黑树来实现呢？
+>
+>1.对于插入，删除，查找 以及 输出有序序列 这几个操作，红黑树也可以完成，时间复杂度 与 用跳表实现是相同的。 但是，对于按照区间查找数据这个操作（比如 [20,300]）,红黑树的效率没有跳表高，跳表可以做到 O(logn)的时间复杂度定位区间的起点，然后在原始链表中顺序向后遍历输出，直到遇到值大于区间终点的节点为止。
+>
+>2.跳表更加灵活，它可以通过改变节点的抽取间隔，灵活地平衡空间复杂度和时间复杂度
+>
+>3.相比红黑树，跳表更容易实现，代码更简单。
+
+[Skip List--跳表](https://leetcode.cn/problems/design-skiplist/solutions/1699291/gojava-by-kyushu-2vxr/)
+
+[跳表的原理与实现]([跳表的原理与实现 [图解\]_跳表实现-CSDN博客](https://blog.csdn.net/Appleeatingboy/article/details/119948340))
+
+```go
+package main
+
+import (
+	"fmt"
+	"math/rand"
+)
+
+type Node struct {
+	Val  int   // 节点的值
+	Next *Node // 当前节点的下一个节点（在同一层级）
+	Down *Node // 当前节点的下方节点（在下一层级）
+}
+
+type Skiplist struct {
+	Head        *Node   // 跳表的头节点
+	MaxLevel    int     // 跳表的最大层数
+	Probability float64 // 生成新层级的概率
+}
+
+// Constructor 构造一个新的跳表，允许指定最大层数和索引概率
+func Constructor(maxLevel int, probability float64) Skiplist {
+	// 返回一个新的跳表实例，头节点的值是 -1，表示占位符，不存储有效数据
+	// MaxLevel 限制跳表的最大层数
+	// Probability 设置每一层生成的概率
+	return Skiplist{
+		Head:        &Node{Val: -1, Next: nil, Down: nil},
+		MaxLevel:    maxLevel,
+		Probability: probability,
+	}
+}
+
+// Search 查找跳表中是否存在目标值
+func (this *Skiplist) Search(target int) bool {
+	curr := this.Head
+	// 从头节点开始，逐层遍历跳表
+	for curr != nil {
+		// 遍历当前层级，找到比目标值大的第一个节点
+		for curr.Next != nil && curr.Next.Val < target {
+			curr = curr.Next
+		}
+		// 如果找到了目标值，则返回 true
+		if curr.Next != nil && curr.Next.Val == target {
+			return true
+		}
+		// 如果没有找到目标值，进入下一层
+		curr = curr.Down
+	}
+	// 如果没有找到目标值，返回 false
+	return false
+}
+
+// Add 插入一个新的数值到跳表中
+func (this *Skiplist) Add(num int) {
+	curr, isInsert := this.Head, true
+	down := &Node{Val: -1, Next: nil, Down: nil} // 用于保存每一层的插入节点
+	var queue []*Node
+	// 从最上层开始，找到插入位置，并将节点加入队列
+	for curr != nil {
+		// 在当前层级中找到比目标值大的第一个节点
+		for curr.Next != nil && curr.Next.Val < num {
+			curr = curr.Next
+		}
+		// 将当前层的节点加入队列，队列用于记录当前层的位置
+		queue = append(queue, curr)
+		// 进入下一层
+		curr = curr.Down
+	}
+	// 按照队列中的位置，逐层插入节点
+	for isInsert && len(queue) > 0 {
+		// 获取当前层的节点
+		curr = queue[len(queue)-1]
+		// 从队列中移除当前层节点
+		queue = queue[:len(queue)-1]
+		// 插入新的节点
+		if down.Val == -1 {
+			// 当前层没有下层节点，直接插入
+			curr.Next = &Node{Val: num, Next: curr.Next, Down: nil}
+		} else {
+			// 当前层有下层节点，将下层节点链接到当前节点
+			curr.Next = &Node{Val: num, Next: curr.Next, Down: down}
+		}
+		// 更新下层节点为当前插入的节点
+		down = curr.Next
+		// 随机决定是否继续在当前层之上增加新层级
+		isInsert = rand.Float64() < this.Probability
+		// 如果当前层数超过最大层数，停止生成新层
+		if len(queue) >= this.MaxLevel {
+			isInsert = false
+		}
+	}
+	// 如果插入过程中增加了新层级，更新头节点
+	if isInsert {
+		// 新的头节点的 Down 指向原来的头节点，表示跳表的层级增加
+		this.Head = &Node{Val: -1, Next: nil, Down: this.Head}
+	}
+}
+
+// Erase 删除跳表中指定的值
+func (this *Skiplist) Erase(num int) bool {
+	curr, isFound := this.Head, false
+	// 从头节点开始，逐层查找目标值并删除
+	for curr != nil {
+		// 遍历当前层级，找到比目标值大的第一个节点
+		for curr.Next != nil && curr.Next.Val < num {
+			curr = curr.Next
+		}
+		// 如果找到了目标值，则删除该节点
+		if curr.Next != nil && curr.Next.Val == num {
+			isFound = true
+			// 删除当前节点的下一个节点
+			curr.Next = curr.Next.Next
+		}
+		// 进入下一层
+		curr = curr.Down
+	}
+	// 如果找到了并删除了节点，返回 true，否则返回 false
+	return isFound
+}
+
+// Print 打印跳表结构
+func (this *Skiplist) Print() {
+	// 从头节点开始遍历每一层
+	curr := this.Head
+	for curr != nil {
+		// 从左到右打印当前层的节点值
+		node := curr.Next
+		levelStr := ""
+		for node != nil {
+			levelStr += fmt.Sprintf("%d -> ", node.Val)
+			node = node.Next
+		}
+		if levelStr == "" {
+			fmt.Println("Empty level")
+		} else {
+			// 去除最后的 " -> " 并打印当前层
+			fmt.Println(levelStr[:len(levelStr)-4])
+		}
+		// 移动到下一层
+		curr = curr.Down
+	}
+}
+
+func main() {
+	skipList := Constructor(32, 0.5)
+	values := []int{3, 6, 7, 9, 12, 19, 17, 26, 21, 25}
+	for _, value := range values {
+		skipList.Add(value)
+	}
+	skipList.Print()
+
+	skipList.Add(10)
+	skipList.Print()
+	skipList.Erase(10)
+	skipList.Print()
+}
+
+```
+
+
 
 ### 二叉树
 
@@ -5509,7 +5989,23 @@ systemctl start etcd
 
 ## Git
 
+git status：查看工作区的文件状态，包括未跟踪、已修改和已暂存的文件。
 
+git diff：查看工作区中文件的修改内容。
+
+git show：查看提交记录和文件的修改内容。
+
+git log：查看提交日志，包括提交作者、提交时间和提交信息等。
+
+git blame：查看文件的修改历史和每行代码的修改信息，用于追踪文件的修改归属。
+
+git ls-files：列出Git仓库中的所有文件。
+
+git ls-tree：查看指定提交或分支的文件树。
+
+git cat-file：查看Git对象的内容，如查看文件内容可以使用”git cat-file -p “。
+
+![Git-Cheet-Sheet-ByGeekHour](./assets/Git-Cheet-Sheet-ByGeekHour.png)
 
 ## Ref
 
