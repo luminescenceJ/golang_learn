@@ -2270,6 +2270,36 @@ func strStr(haystack, needle string) int {
 
 > KMP 算法通过利用 `next` 数组来避免重复匹配，在匹配过程中高效地跳过已经匹配的部分，使得时间复杂度降为 O(n + m)，其中 n 是 `haystack` 的长度，m 是 `needle` 的长度。这段代码展示了如何利用 `next` 数组在匹配过程中进行跳跃以提高效率。
 
+### 二分查找
+
+二分查找大于等于target的最小数
+
+```go
+// lowerBound 返回最小的满足 nums[i] >= target 的下标 i
+// 如果数组为空，或者所有数都 < target，则返回 len(nums)
+// 要求 nums 是非递减的，即 nums[i] <= nums[i + 1]
+func lowerBound(nums []int, target int) int {
+    left, right := 0, len(nums)-1 // 闭区间 [left, right]
+    for left <= right { // 区间不为空
+        // 循环不变量：
+        // nums[left-1] < target
+        // nums[right+1] >= target
+        mid := left + (right-left)/2
+        if nums[mid] >= target {
+            right = mid - 1 // 范围缩小到 [left, mid-1]
+        } else {
+            left = mid + 1 // 范围缩小到 [mid+1, right]
+        }
+    }
+    // 循环结束后 left = right+1
+    // 此时 nums[left-1] < target 而 nums[left] = nums[right+1] >= target
+    // 所以 left 就是第一个 >= target 的元素下标
+    return left
+}
+```
+
+
+
 ### 排序算法
 
 **稳定排序**：冒泡排序、插入排序、归并排序、计数排序、桶排序、基数排序
@@ -2460,6 +2490,57 @@ func QuickSort(arr []int, left, right int) {
 效率略高于1.0，由于等于部分被单独拿出来，再次迭代大小区的长度就会减少
 
 ![image-20231206212115256](./assets/image-20231206212115256-1729756858955-19.png)
+
+```go
+// partition3Way 实现荷兰国旗划分，返回等于区间的左右边界
+func partition3Way(arr []int, left, right int) (int, int) {
+	if left >= right {
+		return left, right
+	}
+
+	pivot := arr[right]   // 选取最右边元素作为基准值
+	lt, gt := left, right // lt 指向小于 pivot 的区域，gt 指向大于 pivot 的区域
+	i := left             // 遍历指针
+
+	for i <= gt {
+		if arr[i] < pivot {
+			arr[i], arr[lt] = arr[lt], arr[i] // 交换，把小的数放到左边
+			lt++
+			i++
+		} else if arr[i] > pivot {
+			arr[i], arr[gt] = arr[gt], arr[i] // 交换，把大的数放到右边
+			gt--
+		} else {
+			i++ // 相等的情况，直接移动 i
+		}
+	}
+
+	return lt, gt // 返回等于 pivot 的区间
+}
+
+// quickSort3Way 实现基于荷兰国旗的快速排序
+func quickSort3Way(arr []int, left, right int) {
+	if left >= right {
+		return
+	}
+
+	lt, gt := partition3Way(arr, left, right) // 进行三向划分
+
+	quickSort3Way(arr, left, lt-1)  // 递归处理小于区
+	quickSort3Way(arr, gt+1, right) // 递归处理大于区
+}
+
+func main() {
+	arr := []int{5, 3, 8, 2, 5, 7, 1, 5, 6, 4}
+	quickSort3Way(arr, 0, len(arr)-1)
+	fmt.Println(arr) // 输出: [1 2 3 4 5 5 5 6 7 8]
+}
+
+```
+
+
+
+
 
 ##### 快排3.0
 
@@ -2753,7 +2834,6 @@ func main() {
 
 ```go
 // leetcode
-
 func sortArray(nums []int) []int {
     // 堆排序-大根堆，升序排序，基于比较交换的不稳定算法，时间O(nlogn)，空间O(1)-迭代建堆
 	// 遍历元素时间O(n)，堆化时间O(logn)，开始建堆次数多些，后面次数少 
@@ -2793,14 +2873,82 @@ func sortArray(nums []int) []int {
 		heapify(nums, i, end)
 	}
 	// 依次弹出元素，然后再堆化，相当于依次把最大值放入尾部
+    // 注意：至此大根堆已经完成，剩下的是数组排序，依次从堆中依次弹出最大元素（即堆顶元素），并将其放到数组的末尾，从而完成排序的过程。
 	for i:=end;i>=0;i-- {
 		nums[0], nums[i] = nums[i], nums[0]
-		end--
-		heapify(nums, 0, end)
+		end-- // 堆顶放到末尾再将堆数量减少来模拟出堆
+		heapify(nums, 0, end) // 原末尾数现在位于堆顶，需要向下heapify
 	}
 	return nums
 }
 ```
+
+
+
+#### 小根堆实现
+
+```go
+// MinHeap 小根堆结构
+type MinHeap struct {
+    data []int
+}
+
+// Push 插入元素到堆
+func (h *MinHeap) Push(val int) {
+    h.data = append(h.data, val)
+    h.HeapifyUp(len(h.data) - 1) // 维护堆性质
+}
+
+// HeapifyUp 从底部向上调整
+func (h *MinHeap) HeapifyUp(index int) {
+    parent := (index - 1) / 2
+    for index > 0 && h.data[index] < h.data[parent] {
+       h.data[index], h.data[parent] = h.data[parent], h.data[index]
+       index = parent
+       parent = (index - 1) / 2
+    }
+}
+
+// Pop 弹出最小值（堆顶元素）
+func (h *MinHeap) Pop() (int, bool) {
+    if len(h.data) == 0 {
+       return 0, false // 堆为空
+    }
+
+    minV := h.data[0] // 取出堆顶元素
+    h.data[0] = h.data[len(h.data)-1]
+    h.data = h.data[:len(h.data)-1] // 移除最后一个元素
+    h.HeapifyDown(0)                // 维护堆性质
+
+    return minV, true
+}
+
+// HeapifyDown 从顶部向下调整
+func (h *MinHeap) HeapifyDown(index int) {
+    size := len(h.data)
+    for {
+       left := 2*index + 1
+       right := 2*index + 2
+       smallest := index
+
+       if left < size && h.data[left] < h.data[smallest] {
+          smallest = left
+       }
+       if right < size && h.data[right] < h.data[smallest] {
+          smallest = right
+       }
+
+       if smallest == index {
+          break // 已经是最小堆，不需要调整
+       }
+
+       h.data[index], h.data[smallest] = h.data[smallest], h.data[index]
+       index = smallest
+    }
+}
+```
+
+
 
 #### 桶排序
 
@@ -4104,7 +4252,7 @@ func kruskalMST(graph Graph) []Edge {
 }
 ```
 
-* Prim算法
+- Prim算法
 
 >1. 从源点出发，将所有与源点连接的点加入一个待处理的集合中
 >2. 从集合中找出与源点的边中权重最小的点，从待处理的集合中移除标记为确定的点
@@ -4354,6 +4502,79 @@ m3管m3右侧部分，m1管m1右侧，m2同理，这样插入新服务器时可�
 
 给m1\m2\m3服务器分别分配1000个字符串用于抢环。数据选择的服务器取决于距离字符串hash的距离大小顺时针最近的服务器。
 
+### 前缀树
+
+> 前缀树是一种多叉树，其中每个节点表示一个字符串中的字符。从根节点到某个节点路径上的字符拼接起来，形成一个字符串。前缀树的每条边表示一个字符，每个节点代表某个字符串的前缀。
+
+```go
+type TrieNode struct {
+    children map[rune]*TrieNode
+    isEnd    bool
+}
+
+type Trie struct {
+    root *TrieNode
+}
+
+func NewTrie() *Trie {
+    return &Trie{root: &TrieNode{children: make(map[rune]*TrieNode)}}
+}
+
+//插入操作是将一个字符串逐字符地插入前缀树中。每次插入时，从根节点开始，依次检查每个字符是否存在于当前节点的子节点中。如果不存在，则创建新的子节点。
+func (t *Trie) Insert(word string) {
+    node := t.root
+    for _, char := range word {
+        if _, found := node.children[char]; !found {
+            node.children[char] = &TrieNode{children: make(map[rune]*TrieNode)}
+        }
+        node = node.children[char]
+    }
+    node.isEnd = true
+}
+
+//查找操作是验证一个字符串是否存在于前缀树中。逐字符检查字符串中的每个字符是否存在于当前节点的子节点中。如果所有字符都能匹配并且最后一个字符所在的节点是一个结束节点，那么该字符串存在于前缀树中。
+func (t *Trie) Search(word string) bool {
+    node := t.root
+    for _, char := range word {
+        if _, found := node.children[char]; !found {
+            return false
+        }
+        node = node.children[char]
+    }
+    return node.isEnd
+}
+
+//删除操作相对复杂，需要逐字符检查并删除多余的节点。在删除一个字符串时，需保证不破坏其他字符串的结构。
+func (t *Trie) Delete(word string) bool {
+    return t.deleteHelper(t.root, word, 0)
+}
+
+func (t *Trie) deleteHelper(node *TrieNode, word string, depth int) bool {
+    if node == nil {
+        return false
+    }
+    if depth == len(word) {
+        if !node.isEnd {
+            return false
+        }
+        node.isEnd = false
+        return len(node.children) == 0
+    }
+    char := rune(word[depth])
+    if t.deleteHelper(node.children[char], word, depth+1) {
+        delete(node.children, char)
+        return !node.isEnd && len(node.children) == 0
+    }
+    return false
+}
+```
+
+> - 在搜索框中输入时，前缀树可以提供前缀匹配的快速提示。例如，输入“ca”时，可以快速提示“cat”和“cap”。
+>
+> - 通过前缀树可以快速查找词典中是否存在某个单词，帮助实现拼写检查功能。
+>
+> - 在网络路由中，前缀树可以用于存储和查找IP地址前缀，从而实现高效的路由查找。
+
 ### 并查集 
 
 <img src="C:\Users\18262\AppData\Roaming\Typora\typora-user-images\image-20240313201429606.png" alt="image-20240313201429606" style="zoom:50%;" /><img src="./assets/image-20240313201503210-1729756926752-45.png" alt="image-20240313201503210" style="zoom:50%;" />
@@ -4507,12 +4728,9 @@ func (u *unionSet) isSameSet(p,q int)bool{
 # 主键自增归零 以表dish为例，主键为id
 SELECT AUTO_INCREMENT FROM information_schema.tables WHERE table_name="dish";
 # 或 SHOW TABLE STATUS LIKE "dish";
-
 ALTER TABLE dish AUTO_INCREMENT=1; #再查询发现不会改变
 ANALYZE TABLE dish; # 分析数据表后可以发现更改
 ```
-
-
 
 **查询数据库**
 
@@ -5101,10 +5319,6 @@ func Insert(){
 
 事务的回滚正确的理解应该是，如果事务中**所有sql语句执行正确则需要自己手动提交commit；否则有任何一条执行错误，需要自己提交一条rollback，这时会回滚所有操作**，而不是commit会给你自动判断和回滚。
 
-
-
-
-
 ### 存储引擎
 
 ![image-20241025121804959](./assets/image-20241025121804959.png)
@@ -5131,6 +5345,11 @@ create index idx_user_name on tb_user(name); # 为tb_user表中的name字段创�
 create unique index idx_user_phone on tb_user(phone); # 为tb_user表中的phone字段创建唯一索引
 create unique index idx_user_pro_age_sta on tb_user(profession,age,status); # 为tb_user表中的profession,age,status三个字段创建联合索引
 # 索引命名规范为 idx_tableName_colName
+
+
+# 可以使用 EXPLAIN 关键字查看查询是否使用了索引：
+EXPLAIN SELECT * FROM dish WHERE name = '某个菜品' AND price > 10.00;
+# 如果 possible_keys 或 key 列中显示 idx_dish_name_price，说明索引已被 MySQL 使用。
 
 drop index idx_user_name on tb_user; #删除索引
 ```
@@ -5621,6 +5840,8 @@ $ docker image rm [imageName]  # 删除 image 文件
 
 ### 其他有用的操作
 
+[使用docker-compose 部署 MySQL（所有版本通用）_docker compose mysql-CSDN博客](https://blog.csdn.net/weixin_44606481/article/details/132840940)
+
 **（1）docker container start**
 
 前面的`docker container run`命令是新建容器，每运行一次，就会新建一个容器。同样的命令运行两次，就会生成两个一模一样的容器文件。如果希望重复使用容器，就要使用`docker container start`命令，它用来启动已经生成、已经停止运行的容器文件。
@@ -5635,6 +5856,7 @@ $ docker image rm [imageName]  # 删除 image 文件
 
 > ```bash
 > $ docker container stop [containerID]
+> 
 > ```
 
 这两个信号的差别是，应用程序收到 SIGTERM 信号以后，可以自行进行收尾清理工作，但也可以不理会这个信号。如果收到 SIGKILL 信号，就会强行立即终止，那些正在进行中的操作会全部丢失。
