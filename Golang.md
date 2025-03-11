@@ -4575,6 +4575,82 @@ func (t *Trie) deleteHelper(node *TrieNode, word string, depth int) bool {
 >
 > - 在网络路由中，前缀树可以用于存储和查找IP地址前缀，从而实现高效的路由查找。
 
+### 线段树
+
+**线段树解决的是「区间和」的问题，且该「区间」会被修改**
+
+如果我们需要多次求某些区间的和，是不是首先想到了利用「前缀和」。关于前缀和的详细介绍可见 前缀和数组
+
+但是如果 nums 会被修改呢？比如：
+
+- 把第 i 个元素修改成 x
+- 把第 i 个元素增加 x
+- 把区间 [i, j] 内的元素都增加 x
+
+此时，如果我们再使用「前缀和」，就没那么高效了。因为每一次更新，前缀和数组必须也随之更新，时间复杂度为 O(n)
+
+所以**线段树**主要实现两个方法：「求区间和」&&「修改区间」，且时间复杂度均为 `O(logn)`。**线段树的每个节点代表一个区间**
+
+![image-20250310170416875](./assets/image-20250310170416875.png)
+
+每个节点代表一个区间，而节点的值就是该区间的和 (**其实还可以根据题目问题，改变表示的含义！！**)
+
+- 数字之和「总数字之和 = 左区间数字之和 + 右区间数字之和」
+- 最大公因数 (GCD)「总 GCD = gcd(左区间 GCD, 右区间 GCD)」
+- 最大值「总最大值 = max(左区间最大值，右区间最大值)」
+
+```go
+// 基于链表的实现
+class Node {
+    // 左右孩子节点
+    Node left, right;
+    // 当前节点值
+    int val;
+}
+
+public void buildTree(Node node, int start, int end) {
+    // 到达叶子节点
+    if (start == end) {
+        node.val = arr[start];
+        return ;
+    }
+    int mid = (start + end) >> 1;
+    buildTree(node.left, start, mid);
+    buildTree(node.right, mid + 1, end);
+    // 向上更新
+    pushUp(node);
+}
+// 向上更新
+private void pushUp(Node node) {
+    node.val = node.left.val + node.right.val;
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### 并查集 
 
 <img src="C:\Users\18262\AppData\Roaming\Typora\typora-user-images\image-20240313201429606.png" alt="image-20240313201429606" style="zoom:50%;" /><img src="./assets/image-20240313201503210-1729756926752-45.png" alt="image-20240313201503210" style="zoom:50%;" />
@@ -6208,6 +6284,137 @@ systemctl start etcd
 >本体: /usr/local/mytool
 >
 >可执行文件:/usr/bin
+
+### 后端接口测试
+
+接口测试规范
+
+接口测试主要关注 **功能正确性、性能、稳定性、安全性**，一般可分为以下几类：
+
+**（1）基本功能测试**
+
+- GET 请求
+
+  ```
+  curl -X GET http://localhost:8080/api/user?id=1
+  ```
+
+- POST 请求
+
+  ```
+  curl -X POST http://localhost:8080/api/login -H "Content-Type: application/json" -d '{"username": "test", "password": "123456"}'
+  ```
+
+- PUT 请求
+
+  ```
+  curl -X PUT http://localhost:8080/api/user/1 -H "Content-Type: application/json" -d '{"nickname": "newname"}'
+  ```
+
+- DELETE 请求
+
+  ```
+  curl -X DELETE http://localhost:8080/api/user/1
+  ```
+
+**（2）HTTP 状态码检查**
+
+| 状态码 | 说明         |
+| ------ | ------------ |
+| 200    | 请求成功     |
+| 201    | 资源创建成功 |
+| 400    | 参数错误     |
+| 401    | 未授权       |
+| 403    | 禁止访问     |
+| 404    | 资源未找到   |
+| 500    | 服务器错误   |
+
+可以使用 `curl -i` 来查看 HTTP 响应头：
+
+```
+curl -i http://localhost:8080/api/user?id=1
+```
+
+**（3）接口返回值格式**
+
+接口返回值一般使用 **JSON 格式**，规范如下：
+
+```
+{
+  "code": 200,
+  "message": "请求成功",
+  "data": {
+    "user_id": 1,
+    "nickname": "test"
+  }
+}
+```
+
+**接口响应字段规范**
+
+- `code`：状态码
+- `message`：响应信息
+- `data`：返回的数据
+
+**（4）参数校验**
+
+- 必填参数是否缺失
+- 数据类型是否正确（如 `int` 不能传 `string`）
+- 参数长度限制（如密码不能少于 6 位）
+- SQL 注入检测（避免 `id=1 OR 1=1` 这样的 SQL 注入）
+
+**（5）安全性测试**
+
+- **XSS**（跨站脚本攻击）：输入 `<script>alert(1)</script>` 进行测试
+
+- **SQL 注入**：输入 `1 OR 1=1` 观察返回结果
+
+- 身份验证：
+
+  ```
+  curl -H "Authorization: Bearer <token>" http://localhost:8080/api/user
+  ```
+
+- Rate Limit（限流）：
+
+  ```
+  ab -n 1000 -c 50 http://localhost:8080/api/user
+  ```
+
+**（6）压力测试**
+
+使用 `wrk` 或 `ab` 进行压力测试：
+
+```
+wrk -t4 -c100 -d30s http://localhost:8080/api/user
+```
+
+- `-t4`：4 个线程
+- `-c100`：并发 100 个请求
+- `-d30s`：持续 30 秒
+
+3. 推荐的测试工具
+
+| 工具                    | 适用场景         |
+| ----------------------- | ---------------- |
+| `Postman`               | GUI 界面测试 API |
+| `curl`                  | 终端测试 API     |
+| `wrk`                   | HTTP 压测        |
+| `ab` (Apache Benchmark) | HTTP 并发测试    |
+| `JMeter`                | 复杂 API 测试    |
+| `GoReplay`              | 真实流量回放测试 |
+
+系统运行状态查看
+
+查询所有监听端口    netstat -tulnp 或 ss -tulnp
+查询某端口占用    lsof -i :8080
+CPU 使用情况    top 或 htop
+进程 CPU 排序    `ps aux --sort=-%cpu
+进程内存排序    `ps aux --sort=-%mem
+内存使用情况    free -h
+磁盘使用情况    df -h
+查询进程    `ps aux
+监控磁盘 I/O    iostat -x 1 5
 
 ## Git
 
