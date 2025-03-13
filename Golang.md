@@ -4631,6 +4631,89 @@ private void pushUp(Node node) {
 
 
 
+#### 线段树求区间和
+
+[Golang实现线段树：原理、使用与最佳实践 - 极客技术博客](https://geek-blogs.com/golang/golang-algo/golang-segment-tree/)
+
+```go
+package main
+
+import "fmt"
+
+type SegmentTreeNode struct {
+	left, right int
+	sum         int
+	leftChild   *SegmentTreeNode
+	rightChild  *SegmentTreeNode
+}
+
+type SegmentTree struct {
+	root *SegmentTreeNode
+}
+
+func buildSegmentTree(arr []int, left, right int) *SegmentTreeNode {
+	if left > right {
+		return nil
+	}
+	node := &SegmentTreeNode{left: left, right: right}
+	if left == right {
+		node.sum = arr[left]
+		return node
+	}
+	mid := (left + right) / 2
+	node.leftChild = buildSegmentTree(arr, left, mid)
+	node.rightChild = buildSegmentTree(arr, mid+1, right)
+	node.sum = node.leftChild.sum + node.rightChild.sum
+	return node
+}
+
+func NewSegmentTree(arr []int) *SegmentTree {
+	root := buildSegmentTree(arr, 0, len(arr)-1)
+	return &SegmentTree{root: root}
+}
+
+func (st *SegmentTree) query(left, right int) int {
+	return st.root.query(left, right)
+}
+
+func (node *SegmentTreeNode) query(left, right int) int {
+	if left > node.right || right < node.left {
+		return 0
+	}
+	if left <= node.left && right >= node.right {
+		return node.sum
+	}
+	leftSum := node.leftChild.query(left, right)
+	rightSum := node.rightChild.query(left, right)
+	return leftSum + rightSum
+}
+
+func (st *SegmentTree) update(index, val int) {
+	st.root.update(index, val)
+}
+
+func (node *SegmentTreeNode) update(index, val int) {
+	if index < node.left || index > node.right {
+		return
+	}
+	if node.left == node.right {
+		node.sum = val
+		return
+	}
+	node.leftChild.update(index, val)
+	node.rightChild.update(index, val)
+	node.sum = node.leftChild.sum + node.rightChild.sum
+}
+
+func main() {
+	arr := []int{1, 3, 5, 7, 9, 11}
+	st := NewSegmentTree(arr)
+	sum := st.query(1, 3)
+	fmt.Println("Sum of [1, 3]:", sum)
+}
+
+```
+
 
 
 
@@ -6413,7 +6496,7 @@ CPU 使用情况    top 或 htop
 进程内存排序    `ps aux --sort=-%mem
 内存使用情况    free -h
 磁盘使用情况    df -h
-查询进程    `ps aux
+查询进程    `ps aux`
 监控磁盘 I/O    iostat -x 1 5
 
 ## Git
